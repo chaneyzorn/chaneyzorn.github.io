@@ -1,0 +1,141 @@
+baseURL: "https://chaneyzorn.github.io/"
+languageCode: "zh-CN"
+title: "Chaney's Moon"
+theme: "PaperMod"
+
+paginate: 20
+buildDrafts: false
+buildFuture: false
+buildExpired: false
+
+enableEmoji: true
+enableInlineShortcodes: true
+enableRobotsTXT: true
+# googleAnalytics: UA-123-45
+
+minify:
+  disableXML: true
+  minifyOutput: true
+
+params:
+  env: production # to enable google analytics, opengraph, twitter-cards and schema.
+  title: "Chaney's Moon"
+  description: "何夜无月 逝者如斯"
+  keywords: [Blog, PaperMod]
+  author: ["ChaneyZorn"]
+  images: ["https://avatars.githubusercontent.com/u/8176642"]
+  DateFormat: "2006-01-02"
+  defaultTheme: auto # dark, light
+  disableThemeToggle: false
+
+  ShowReadingTime: true
+  ShowShareButtons: true
+  ShowPostNavLinks: true
+  ShowBreadCrumbs: true
+  ShowCodeCopyButtons: true
+  ShowWordCount: true
+  ShowRssButtonInSectionTermList: true
+  UseHugoToc: true
+  disableSpecial1stPost: false
+  disableScrollToTop: false
+  comments: true
+  hidemeta: false
+  hideSummary: false
+  showtoc: true
+  tocopen: false
+
+  assets:
+    disableHLJS: false # to disable highlight.js
+    disableFingerprinting: false
+    favicon: "https://avatars.githubusercontent.com/u/8176642"
+    favicon16x16: "https://avatars.githubusercontent.com/u/8176642"
+    favicon32x32: "https://avatars.githubusercontent.com/u/8176642"
+    apple_touch_icon: ""
+    safari_pinned_tab: ""
+
+  label:
+    text: "Home"
+    icon: /apple-touch-icon.png
+    iconHeight: 35
+
+  profileMode:
+    enabled: false
+    title: "Chaney Zorn"
+    subtitle: "A Dying Moon, but Dawning."
+    imageUrl: "https://avatars.githubusercontent.com/u/8176642"
+    imageWidth: 120
+    imageHeight: 120
+    imageTitle: "A Dying Moon, but Dawning"
+    buttons:
+      - name: Posts
+        url: posts
+      - name: Tags
+        url: tags
+
+  homeInfoParams:
+    Title: "何夜无月 逝者如斯"
+    Content: "A Dying Moon, but Dawning."
+
+  socialIcons:
+    - name: twitter
+      url: "https://twitter.com/campanla"
+    - name: github
+      url: "https://github.com/chaneyzorn"
+
+  analytics:
+    google:
+      SiteVerificationTag: ""
+    bing:
+      SiteVerificationTag: ""
+    yandex:
+      SiteVerificationTag: ""
+
+  cover:
+    hidden: true # hide everywhere but not in structured data
+    hiddenInList: true # hide on list pages and home
+    hiddenInSingle: true # hide on single page
+
+  editPost:
+    URL: "https://github.com/chaneyzorn/chaneyzorn.github.io"
+    Text: "Suggest Changes" # edit text
+    appendFilePath: true # to append file path to Edit link
+
+  # for search
+  # https://fusejs.io/api/options.html
+  fuseOpts:
+    isCaseSensitive: false
+    shouldSort: true
+    location: 0
+    distance: 1000
+    threshold: 0.4
+    minMatchCharLength: 0
+    keys: ["title", "permalink", "summary", "content"]
+menu:
+  main:
+    - identifier: categories
+      name: categories
+      url: /categories/
+      weight: 10
+    - identifier: tags
+      name: tags
+      url: /tags/
+      weight: 20
+    - identifier: github
+      name: github
+      url: https://github.com/chaneyzorn
+      weight: 30
+    - identifier: twitter
+      name: twitter
+      url: https://twitter.com/campanla
+      weight: 40
+
+# Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
+pygmentsUseClasses: true
+markup:
+  highlight:
+    noClasses: false
+    anchorLineNos: true
+    codeFences: true
+    guessSyntax: true
+    lineNos: true
+    style: monokailight
