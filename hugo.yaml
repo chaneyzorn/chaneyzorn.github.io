@@ -1,6 +1,6 @@
 baseURL: "https://chaneyzorn.github.io/"
 languageCode: "zh-CN"
-title: "Chaney's Moon"
+title: "Chaney's MoonBook"
 theme: "PaperMod"
 
 paginate: 20
@@ -19,7 +19,7 @@ minify:
 
 params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
-  title: "Chaney's Moon"
+  title: "Chaney's MoonBook"
   description: "何夜无月 逝者如斯"
   keywords: [Blog, PaperMod]
   author: ["ChaneyZorn"]
@@ -47,25 +47,25 @@ params:
   assets:
     disableHLJS: false # to disable highlight.js
     disableFingerprinting: false
-    favicon: "https://avatars.githubusercontent.com/u/8176642"
-    favicon16x16: "https://avatars.githubusercontent.com/u/8176642"
-    favicon32x32: "https://avatars.githubusercontent.com/u/8176642"
-    apple_touch_icon: ""
-    safari_pinned_tab: ""
+    favicon: "/favicon_io/favicon.ico"
+    favicon16x16: "/favicon_io/favicon-16x16.png"
+    favicon32x32: "/favicon_io/favicon-32x32.png"
+    apple_touch_icon: "/favicon_io/apple-touch-icon.png"
+    # safari_pinned_tab: "/assets/favicon_io/apple-touch-icon.svg"
 
   label:
-    text: "Home"
-    icon: /apple-touch-icon.png
+    text: "Chaney's MoonBook"
+    icon: /favicon_io/apple-touch-icon.png
     iconHeight: 35
 
   profileMode:
     enabled: false
     title: "Chaney Zorn"
-    subtitle: "A Dying Moon, but Dawning."
+    subtitle: "The Dying Moon, Wondering, Dawning."
     imageUrl: "https://avatars.githubusercontent.com/u/8176642"
     imageWidth: 120
     imageHeight: 120
-    imageTitle: "A Dying Moon, but Dawning"
+    imageTitle: "The Dying Moon, Wondering, Dawning."
     buttons:
       - name: Posts
         url: posts
@@ -74,7 +74,7 @@ params:
 
   homeInfoParams:
     Title: "何夜无月 逝者如斯"
-    Content: "A Dying Moon, but Dawning."
+    Content: "The Dying Moon, Wondering, Dawning."
 
   socialIcons:
     - name: twitter
@@ -96,7 +96,7 @@ params:
     hiddenInSingle: true # hide on single page
 
   editPost:
-    URL: "https://github.com/chaneyzorn/chaneyzorn.github.io"
+    URL: "https://github.com/chaneyzorn/chaneyzorn.github.io/content"
     Text: "Suggest Changes" # edit text
     appendFilePath: true # to append file path to Edit link
 
