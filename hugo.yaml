@@ -3,6 +3,11 @@ languageCode: "zh-CN"
 title: "Chaney's MoonBook"
 theme: "PaperMod"
 
+author:
+  name: ChaneyZorn
+copyright: Licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
+# rssLimit: 1000
+
 paginate: 20
 buildDrafts: false
 buildFuture: false
@@ -30,7 +35,7 @@ params:
   keywords: [Blog, PaperMod]
   author: ["ChaneyZorn"]
   images: ["/favicon_io/favicon.ico"]
-  DateFormat: "2006-01-02"
+  DateFormat: "2006-01-02 15:04:05"
   defaultTheme: auto # dark, light
   disableThemeToggle: false
 
