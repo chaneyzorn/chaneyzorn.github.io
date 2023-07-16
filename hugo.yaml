@@ -17,13 +17,19 @@ minify:
   disableXML: true
   minifyOutput: true
 
+outputs:
+  home:
+    - HTML
+    - RSS
+    - JSON
+
 params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
   title: "Chaney's MoonBook"
   description: "何夜无月 逝者如斯"
   keywords: [Blog, PaperMod]
   author: ["ChaneyZorn"]
-  images: ["https://avatars.githubusercontent.com/u/8176642"]
+  images: ["/favicon_io/favicon.ico"]
   DateFormat: "2006-01-02"
   defaultTheme: auto # dark, light
   disableThemeToggle: false
@@ -44,6 +50,10 @@ params:
   showtoc: true
   tocopen: false
 
+  mainSections:
+    - cs
+    - posts
+
   assets:
     disableHLJS: false # to disable highlight.js
     disableFingerprinting: false
@@ -61,11 +71,11 @@ params:
   profileMode:
     enabled: false
     title: "Chaney Zorn"
-    subtitle: "The Dying Moon, Wondering, Dawning."
+    subtitle: "The Dying Moon, Wondering the Dawning."
     imageUrl: "https://avatars.githubusercontent.com/u/8176642"
     imageWidth: 120
     imageHeight: 120
-    imageTitle: "The Dying Moon, Wondering, Dawning."
+    imageTitle: "The Dying Moon, Wondering the Dawning."
     buttons:
       - name: Posts
         url: posts
@@ -74,13 +84,15 @@ params:
 
   homeInfoParams:
     Title: "何夜无月 逝者如斯"
-    Content: "The Dying Moon, Wondering, Dawning."
+    Content: "The Dying Moon, Wondering the Dawning."
 
   socialIcons:
-    - name: twitter
-      url: "https://twitter.com/campanla"
     - name: github
       url: "https://github.com/chaneyzorn"
+    - name: twitter
+      url: "https://twitter.com/campanla"
+    - name: rss
+      url: "/index.xml"
 
   analytics:
     google:
@@ -94,6 +106,8 @@ params:
     hidden: true # hide everywhere but not in structured data
     hiddenInList: true # hide on list pages and home
     hiddenInSingle: true # hide on single page
+    responsiveImages: true
+    linkFullImages: true
 
   editPost:
     URL: "https://github.com/chaneyzorn/chaneyzorn.github.io/content"
@@ -112,22 +126,26 @@ params:
     keys: ["title", "permalink", "summary", "content"]
 menu:
   main:
-    - identifier: categories
-      name: categories
-      url: /categories/
-      weight: 10
     - identifier: tags
       name: tags
       url: /tags/
+      weight: 10
+    - identifier: archives
+      name: archives
+      url: /archives/
       weight: 20
+    - identifier: search
+      name: search
+      url: /search/
+      weight: 40
     - identifier: github
       name: github
       url: https://github.com/chaneyzorn
-      weight: 30
+      weight: 50
     - identifier: twitter
       name: twitter
       url: https://twitter.com/campanla
-      weight: 40
+      weight: 60
 
 # Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
 pygmentsUseClasses: true
@@ -139,3 +157,24 @@ markup:
     guessSyntax: true
     lineNos: true
     style: monokailight
+
+privacy:
+  vimeo:
+    disabled: false
+    simple: true
+  twitter:
+    disabled: false
+    enableDNT: true
+    simple: true
+  instagram:
+    disabled: false
+    simple: true
+  youtube:
+    disabled: false
+    privacyEnhanced: true
+
+services:
+  instagram:
+    disableInlineCSS: true
+  twitter:
+    disableInlineCSS: true
