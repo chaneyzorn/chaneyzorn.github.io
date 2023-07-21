@@ -5,7 +5,7 @@ theme: "PaperMod"
 
 author:
   name: ChaneyZorn
-copyright: Licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
+copyright: Copyright © ChaneyZorn | CC BY-NC-ND 4.0 |
 # rssLimit: 1000
 
 paginate: 20
@@ -34,8 +34,8 @@ params:
   description: "何夜无月 逝者如斯"
   keywords: [Blog, PaperMod]
   author: ["ChaneyZorn"]
-  images: ["/favicon_io/favicon.ico"]
-  DateFormat: "2006-01-02 15:04:05"
+  images: ["/cm/chaney-cover.jpg"]
+  DateFormat: "2006-01-02"
   defaultTheme: auto # dark, light
   disableThemeToggle: false
 
