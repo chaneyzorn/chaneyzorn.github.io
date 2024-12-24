@@ -1,6 +1,6 @@
 ---
 title: "Adguard DNS 与 systemd-resolved 配置"
-date: 2024-12-08T14:37:03+08:00
+date: 2024-12-24T14:37:03+08:00
 isCJKLanguage: true
 draft: false
 tags: ["systemd", "systemd-resloved", "adguard", "adguard-home", "DNS", "mDNS", "selfhosted", "gethostbyname"]
