@@ -234,7 +234,7 @@ resolved 的 DNSStubListener 被关闭后：
 
 ### 有没有更好的解决方式？
 
-~~我 systemd 全家桶天下无敌，凭什么要改我的配置。~~
+~~我 systemd 全家桶天下无敌，凭什么要改我的配置！~~
 
 Adguard wiki 提供的方案存在以下缺点：
 
