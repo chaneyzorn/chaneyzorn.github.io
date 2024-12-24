@@ -1,6 +1,7 @@
 ---
 title: "先上线再说"
 date: 2023-07-16T17:10:00+08:00
+isCJKLanguage: true
 draft: false
 tags: ["others"]
 # description: "Go Online First"

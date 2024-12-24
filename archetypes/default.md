@@ -1,6 +1,7 @@
 ---
 title: "{{ replace .Name "-" " " | title }}"
 date: {{ .Date }}
+isCJKLanguage: true
 draft: true
 tags: ["other"]
 # description: "{{ replace .Name "-" " " | title }}"

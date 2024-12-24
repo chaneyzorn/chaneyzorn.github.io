@@ -1,5 +1,6 @@
 baseURL: "https://chaneyzorn.github.io/"
-languageCode: "zh-CN"
+languageCode: "zh"
+defaultContentLanguage: zh
 title: "Chaney's MoonBook"
 theme: "PaperMod"
 
@@ -8,7 +9,9 @@ author:
 copyright: Copyright © ChaneyZorn | CC BY-NC-ND 4.0 |
 # rssLimit: 1000
 
-paginate: 20
+pagination:
+  pagerSize: 20
+
 buildDrafts: false
 buildFuture: false
 buildExpired: false
@@ -56,7 +59,7 @@ params:
   tocopen: false
 
   mainSections:
-    - cs
+    - codes
     - posts
 
   assets:
@@ -108,9 +111,9 @@ params:
       SiteVerificationTag: ""
 
   cover:
-    hidden: true # hide everywhere but not in structured data
+    hidden: false # hide everywhere but not in structured data
     hiddenInList: true # hide on list pages and home
-    hiddenInSingle: true # hide on single page
+    hiddenInSingle: false # hide on single page
     responsiveImages: true
     linkFullImages: true
 
@@ -153,11 +156,10 @@ menu:
       weight: 60
 
 # Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
-pygmentsUseClasses: true
 markup:
   highlight:
     noClasses: false
-    anchorLineNos: true
+    anchorLineNos: false
     codeFences: true
     guessSyntax: true
     lineNos: true
