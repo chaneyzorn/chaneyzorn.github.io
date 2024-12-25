@@ -7,7 +7,6 @@ theme: "PaperMod"
 author:
   name: ChaneyZorn
 copyright: Copyright © ChaneyZorn | CC BY-NC-ND 4.0 |
-# rssLimit: 1000
 
 pagination:
   pagerSize: 20
@@ -36,7 +35,9 @@ params:
   title: "Chaney's MoonBook"
   description: "何夜无月 逝者如斯"
   keywords: [Blog, PaperMod]
-  author: ["ChaneyZorn"]
+  author:
+    name: ChaneyZorn
+    email: chaneyzorn#gmail#com
   images: ["/cm/chaney-cover.jpg"]
   DateFormat: "2006-01-02"
   defaultTheme: auto # dark, light
@@ -49,6 +50,7 @@ params:
   ShowCodeCopyButtons: true
   ShowWordCount: true
   ShowRssButtonInSectionTermList: true
+  ShowFullTextinRSS: true
   UseHugoToc: true
   disableSpecial1stPost: false
   disableScrollToTop: false
@@ -132,6 +134,11 @@ params:
     threshold: 0.4
     minMatchCharLength: 0
     keys: ["title", "permalink", "summary", "content"]
+
+  followIs:
+    feedId: 94402801171278848
+    userId: 60932538427591680
+
 menu:
   main:
     - identifier: tags
@@ -185,3 +192,5 @@ services:
     disableInlineCSS: true
   twitter:
     disableInlineCSS: true
+  rss:
+    limit: 100
