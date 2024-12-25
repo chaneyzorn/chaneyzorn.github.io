@@ -44,11 +44,12 @@ resolved 对运行在本地的应用程序提供了一个 DNS 中间层，这个
 
 1. 对上游的 DNS 记录进行缓存，在网络配置发生变化时自动刷新缓存；
 2. 对上游的 DNSSEC 进行验证；
-3. 支持将来自本地的 DNS 请求转换为 DoT 和 DoH 发送给上游；
+3. 支持将来自本地的 DNS 请求转换为 DoT 发送给上游（暂不支持 DoH[^doh-issue]）；
 4. 提供 mDNS 和 LLMNR 服务，以及 link-local 地址反向查找设备名；
 5. 提供本地特定别名的地址解析，比如：`<hostname>`、`localhost`、`*.localhost`、`_gateway`、`_outbound`，以及在 `/etc/hosts` 中的映射；
 
 [^resolved]: [systemd-resolved(8) — Arch manual pages](https://man.archlinux.org/man/systemd-resolved.8)
+[^doh-issue]: [Add support for DNS-over-HTTPS to systemd-resolved · Issue #8639 · systemd/systemd](https://github.com/systemd/systemd/issues/8639)
 
 **相关术语解释：**
 
@@ -101,7 +102,7 @@ resolved 使用以下几种接口对本地应用程序提供服务[^resolved]：
 
 但既然 resolved 作为一个中间层，增加了对 mDNS 和 LLMNR 的支持，那么输入一个局域网设备名然后输出它的 IP 地址这样的功能自然是可以实现的，这个功能虽然不能架设在传统的 DNS 协议之上，但是仅将结果暴露在 DNS 接口中却是可行的。这就是 `127.0.0.53:53` 额外提供的特殊能力。另外它还会提供对 DNSSEC 的校验能力。
 
-而 `127.0.0.54:53` 仅是上游 DNS 服务器的转发代理，它既不提供 mDNS 和 LLMNR 查询结果，也不会校验 DNSSEC，但仍然支持将请求转换为 DoT 和 DoH 发送给上游[^resolved]。
+而 `127.0.0.54:53` 仅是上游 DNS 服务器的转发代理，它既不提供 mDNS 和 LLMNR 查询结果，也不会校验 DNSSEC，但仍然支持将请求转换为 DoT 发送给上游[^resolved]。
 
 在被 systemd-resolved 接管的 `/etc/resolv.conf` 文件中，指定的 `nameserver` 就是 `127.0.0.53`。关于 resolved 接管 `resolv.conf` 文件的相关信息，请参考后面小节。
 
