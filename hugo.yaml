@@ -35,7 +35,8 @@ params:
   title: "Chaney's MoonBook"
   description: "何夜无月 逝者如斯"
   keywords: [Blog, PaperMod]
-  author:
+  author: ChaneyZorn
+  authorInfo:
     name: ChaneyZorn
     email: chaneyzorn#gmail#com
   images: ["/cm/chaney-cover.jpg"]
