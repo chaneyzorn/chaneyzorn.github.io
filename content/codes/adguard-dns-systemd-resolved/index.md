@@ -17,9 +17,9 @@ cover:
 
 ![域名至对应服务](./asserts/dns-api-gateway.svg#center)
 
-我使用的 DNS 服务是 [AdguardHome](https://github.com/AdguardTeam/AdGuardHome)，它默认监听在 `0.0.0.0:53/udp` 上，但是在使用了 systemd 全家桶的节点上，systemd-resolved 会监听在 `127.0.0.53:53/dup` 上，因此会导致端口冲突，Adguard 官方给出的解决方式是修改 resolved 的配置，停止监听 `127.0.0.53:53`[^1]。
+我使用的 DNS 服务是 [AdguardHome](https://github.com/AdguardTeam/AdGuardHome)，它默认监听在 `0.0.0.0:53/udp` 上，但是在使用了 systemd 全家桶的节点上，systemd-resolved 会监听在 `127.0.0.53:53/dup` 上，因此会导致端口冲突，Adguard 官方给出的解决方式是修改 resolved 的配置，停止监听 `127.0.0.53:53`[^adguard-wiki]。
 
-[^1]: [Docker · AdguardTeam/AdGuardHome Wiki](https://github.com/AdguardTeam/AdGuardHome/wiki/Docker#resolved)
+[^adguard-wiki]: [Docker · AdguardTeam/AdGuardHome Wiki](https://github.com/AdguardTeam/AdGuardHome/wiki/Docker#resolved)
 
 ```sh {hl_lines=[3,4]}
 $ sudo netstat -uanp
@@ -40,7 +40,7 @@ udp6       0      0 :::5355                 :::*             431/systemd-resolve
 
 ## systemd-resolved 在干啥
 
-resolved 对运行在本地的应用程序提供了一个 DNS 中间层，这个中间层的作用是[^2]：
+resolved 对运行在本地的应用程序提供了一个 DNS 中间层，这个中间层的作用是[^resolved]：
 
 1. 对上游的 DNS 记录进行缓存，在网络配置发生变化时自动刷新缓存；
 2. 对上游的 DNSSEC 进行验证；
@@ -48,7 +48,7 @@ resolved 对运行在本地的应用程序提供了一个 DNS 中间层，这个
 4. 提供 mDNS 和 LLMNR 服务，以及 link-local 地址反向查找设备名；
 5. 提供本地特定别名的地址解析，比如：`<hostname>`、`localhost`、`*.localhost`、`_gateway`、`_outbound`，以及在 `/etc/hosts` 中的映射；
 
-[^2]: [systemd-resolved(8) — Arch manual pages](https://man.archlinux.org/man/systemd-resolved.8)
+[^resolved]: [systemd-resolved(8) — Arch manual pages](https://man.archlinux.org/man/systemd-resolved.8)
 
 **相关术语解释：**
 
@@ -58,9 +58,9 @@ resolved 对运行在本地的应用程序提供了一个 DNS 中间层，这个
 - **DoH**：DNS over HTTPS，客户端与 DNS 服务端使用 HTTPS 协议来传输查询和响应；
 - **mDNS**：MulticastDNS，一种用于局域网中设备相互发现的去中心式的协议。传统 DNS 是中心式的，且域名和地址间的映射相对固定，无法及时反映局域网中设备加入和离开（且 IP 地址可能会被随机分配）的场景。mDNS 可以让这些设备方便地互相找到并通信，而不需要复杂的 DNS 配置。比如直接使用 `<hostname>.local` 来访问局域网中对应的 `<hostname>` 节点，而无需预先知道该节点的 IP 地址并手动进行 DNS 配置。
 - **LLMNR**：和 mDNS 类似，主要流行于 windows 系统，可以使用类似 `MY-OFFICE-PC` 的名称来访问局域网中的设备；
-- **link-local addresses**：仅用于局域网中**单个网段**内部通讯的地址，当无 DHCP 可用时设备可能会自动随机生成一个这样的本地地址。IPv4 地址范围是 `169.254.0.0 - 169.254.255.255`，IPv6 地址范围是 `fe80::/10`。虽然 IPv4 本地地址一般仅在没有 DHCP 时才会被自动生成(或被手动配置)，但当 IPv6 可用时，IPv6 本地地址却总是自动生成并一直存在的[^3]。
+- **link-local addresses**：仅用于局域网中**单个网段**内部通讯的地址，当无 DHCP 可用时设备可能会自动随机生成一个这样的本地地址。IPv4 地址范围是 `169.254.0.0 - 169.254.255.255`，IPv6 地址范围是 `fe80::/10`。虽然 IPv4 本地地址一般仅在没有 DHCP 时才会被自动生成(或被手动配置)，但当 IPv6 可用时，IPv6 本地地址却总是自动生成并一直存在的[^linklocal]。
 
-[^3]: [Link-local address - Wikiwand](https://www.wikiwand.com/en/articles/Link-local_address)
+[^linklocal]: [Link-local address - Wikiwand](https://www.wikiwand.com/en/articles/Link-local_address)
 
 难怪感觉 `fe80` 很眼熟呢：
 
@@ -72,11 +72,11 @@ $ ip a | grep "scope link"
 
 ## systemd-resolved 提供的接口形式
 
-resolved 使用以下几种接口对本地应用程序提供服务[^2]：
+resolved 使用以下几种接口对本地应用程序提供服务[^resolved]：
 
-1. D-Bus 接口 `org.freedesktop.resolve1`[^4]；
+1. D-Bus 接口 `org.freedesktop.resolve1`[^resolved-dbus]；
 2. UNIX socket `/run/systemd/resolve/io.systemd.Resolve`；
-3. glibc 的 `getaddrinfo` 等相关函数[^5]（通过使用 `nss-resolve` 模块[^6]）;
+3. glibc 的 `getaddrinfo` 等相关函数[^getaddrinfo]（通过使用 `nss-resolve` 模块[^nss-resolve]）;
 4. DNSStubListener：使用传统的 DNS 访问 `127.0.0.53:53` 和 `127.0.0.54:53`，涵盖 UDP 和 TCP；
 
 另外 resolved 还提供了本节点在局域网中的 mDNS 和 LLMNR 服务：
@@ -86,12 +86,12 @@ resolved 使用以下几种接口对本地应用程序提供服务[^2]：
 
 ![本地应用使用 resolved](./asserts/app-resolved.svg#center)
 
-注意上图中标注的网络范围。各个接口的使用方式各不相同，且支持的特性也存在差异，更多信息请参考 man page[^2]和 systemd 官方相关文档[^7]。
+注意上图中标注的网络范围。各个接口的使用方式各不相同，且支持的特性也存在差异，更多信息请参考 man page[^resolved]和 systemd 官方相关文档[^resolver-client]。
 
-[^4]: [org.freedesktop.resolve1(5) — Arch manual pages](https://man.archlinux.org/man/org.freedesktop.resolve1.5.en)
-[^5]: [getaddrinfo(3) — Arch manual pages](https://man.archlinux.org/man/getaddrinfo.3.en)
-[^6]: [nss-resolve(8) — Arch manual pages](https://man.archlinux.org/man/nss-resolve.8.en)
-[^7]: [Writing Resolver Clients](https://systemd.io/WRITING_RESOLVER_CLIENTS/)
+[^resolved-dbus]: [org.freedesktop.resolve1(5) — Arch manual pages](https://man.archlinux.org/man/org.freedesktop.resolve1.5.en)
+[^getaddrinfo]: [getaddrinfo(3) — Arch manual pages](https://man.archlinux.org/man/getaddrinfo.3.en)
+[^nss-resolve]: [nss-resolve(8) — Arch manual pages](https://man.archlinux.org/man/nss-resolve.8.en)
+[^resolver-client]: [Writing Resolver Clients](https://systemd.io/WRITING_RESOLVER_CLIENTS/)
 
 ## 127.0.0.53:53 和 127.0.0.54:53 有什么区别？
 
@@ -101,15 +101,15 @@ resolved 使用以下几种接口对本地应用程序提供服务[^2]：
 
 但既然 resolved 作为一个中间层，增加了对 mDNS 和 LLMNR 的支持，那么输入一个局域网设备名然后输出它的 IP 地址这样的功能自然是可以实现的，这个功能虽然不能架设在传统的 DNS 协议之上，但是仅将结果暴露在 DNS 接口中却是可行的。这就是 `127.0.0.53:53` 额外提供的特殊能力。另外它还会提供对 DNSSEC 的校验能力。
 
-而 `127.0.0.54:53` 仅是上游 DNS 服务器的转发代理，它既不提供 mDNS 和 LLMNR 查询结果，也不会校验 DNSSEC，但仍然支持将请求转换为 DoT 和 DoH 发送给上游[^2]。
+而 `127.0.0.54:53` 仅是上游 DNS 服务器的转发代理，它既不提供 mDNS 和 LLMNR 查询结果，也不会校验 DNSSEC，但仍然支持将请求转换为 DoT 和 DoH 发送给上游[^resolved]。
 
 在被 systemd-resolved 接管的 `/etc/resolv.conf` 文件中，指定的 `nameserver` 就是 `127.0.0.53`。关于 resolved 接管 `resolv.conf` 文件的相关信息，请参考后面小节。
 
 ## glibc 的 getaddrinfo 名称解析
 
-glibc 的一些库函数使用 `/etc/nsswitch.conf` 文件来控制其行为，`nsswitch` 表示 The GNU Name Service Switch (NSS)[^8]。
+glibc 的一些库函数使用 `/etc/nsswitch.conf` 文件来控制其行为，`nsswitch` 表示 The GNU Name Service Switch (NSS)[^nsswitch-conf]。
 
-[^8]: [nsswitch.conf(5) — Arch manual pages](https://man.archlinux.org/man/nsswitch.conf.5.en)
+[^nsswitch-conf]: [nsswitch.conf(5) — Arch manual pages](https://man.archlinux.org/man/nsswitch.conf.5.en)
 
 上文中提到的 `nss-resolve` 模块即是配合 glibc 的 `getaddrinfo` 函数，将 DNS 请求交由 systemd-resolved 来处理，这个行为就配置于 `/etc/nsswitch.conf` 的 `hosts` 项中。
 
@@ -138,26 +138,29 @@ netgroup: files
 
 于是我们可以看到，`nss-resolve` 模块仅是 `getaddrinfo` 函数的其中一个环节，它的前后还存在好多其他的模块，于是我们进一步知道了 `getaddrinfo` 解析名称时更完整的流程。
 
-- `mymachines`：nss-mymachines 模块，让 systemd-machined 解析由其管理的容器和虚拟机名称记录[^9]；
-- `resolve`：nss-resolve 模块，让 systemd-resolved 解析由其管理的 DNS 记录，包括 mDNS 和 LLMNR[^6]；
-- `[!UNAVAIL=return]`：如果上述解析模块可用，则跳过后续的解析模块[^8]；
-- `files`[^8]: nss-files 模块，对于 `hosts` 配置项来说，这个文件是指 `/etc/hosts`[^10]。resolved 已提供同样的功能[^2]；
-- `myhostname`：nss-myhostname 模块，解析 `<hostname>`、`*localhost`、`_gateway`、`_outbound`[^11]。resolved 已提供同样的功能[^2];
-- `dns`：传统的 nss-dns 模块，将查询发送到 DNS 服务器，通过 `/etc/resolv.conf` 配置[^12]。resolved 已提供同样的功能，且接管了 `/etc/resolv.conf` 文件，并将 `nameserver` 配置为了 `127.0.0.53`[^2]；
+- `mymachines`：nss-mymachines 模块，让 systemd-machined 解析由其管理的容器和虚拟机名称记录[^nss-mymachines]；
+- `resolve`：nss-resolve 模块，让 systemd-resolved 解析由其管理的 DNS 记录，包括 mDNS 和 LLMNR[^nss-resolve]；
+- `[!UNAVAIL=return]`：如果上述解析模块可用，则跳过后续的解析模块[^nsswitch-conf]；
+- `files`[^nsswitch-conf]: nss-files 模块，对于 `hosts` 配置项来说，这个文件是指 `/etc/hosts`[^hosts]。resolved 已提供同样的功能[^resolved]；
+- `myhostname`：nss-myhostname 模块，解析 `<hostname>`、`*localhost`、`_gateway`、`_outbound`[^nss-myhostname]。resolved 已提供同样的功能[^resolved];
+- `dns`：传统的 nss-dns 模块，将查询发送到 DNS 服务器，通过 `/etc/resolv.conf` 配置[^glibc-resolv]。resolved 已提供同样的功能，且接管了 `/etc/resolv.conf` 文件，并将 `nameserver` 配置为了 `127.0.0.53`[^resolved]；
 
-[^9]: [nss-mymachines(8) — Arch manual pages](https://man.archlinux.org/man/nss-mymachines.8.en)
-[^10]: [hosts(5) — Arch manual pages](https://man.archlinux.org/man/hosts.5.en)
-[^11]: [nss-myhostname(8) — Arch manual pages](https://man.archlinux.org/man/nss-myhostname.8.en)
-[^12]: [glibc/resolv/README at master · bminor/glibc](https://github.com/bminor/glibc/blob/master/resolv/README)
+除这些模块外，如果安装了 [Avahi](https://github.com/avahi)，也可以使用 `nss-mdns` 模块[^nss-mdns]，它会提供 mDNS 查询结果。当然在使用 systemd-resolved 之后就已经包含这个功能了。
+
+[^nss-mymachines]: [nss-mymachines(8) — Arch manual pages](https://man.archlinux.org/man/nss-mymachines.8.en)
+[^hosts]: [hosts(5) — Arch manual pages](https://man.archlinux.org/man/hosts.5.en)
+[^nss-myhostname]: [nss-myhostname(8) — Arch manual pages](https://man.archlinux.org/man/nss-myhostname.8.en)
+[^glibc-resolv]: [glibc/resolv/README at master · bminor/glibc](https://github.com/bminor/glibc/blob/master/resolv/README)
+[^nss-mdns]: [avahi/nss-mdns: for the glibc NSS providing mDNS](https://github.com/avahi/nss-mdns)
 
 ## systemd-resolved 接管 /etc/resolv.conf 的方式
 
-如上文中提及的，当程序使用 glibc 访问 DNS 时，DNS 相关信息会在 `/etc/resolv.conf` 文件[^13]中进行配置。一些应用程序也可能按照这一惯例来自行实现 `resolv.conf` 配置文件的解析并直接访问 DNS 服务。出于这一原因，为了保持兼容性，systemd-resolved 使用了如下几种形式来接管 `/etc/resolv.conf`：
+如上文中提及的，当程序使用 glibc 访问 DNS 时，DNS 相关信息会在 `/etc/resolv.conf` 文件[^resolv-conf]中进行配置。一些应用程序也可能按照这一惯例来自行实现 `resolv.conf` 配置文件的解析并直接访问 DNS 服务。出于这一原因，为了保持兼容性，systemd-resolved 使用了如下几种形式来接管 `/etc/resolv.conf`：
 
 1. **stub 模式**：当 DNSStubListener 处于启用状态时，使用软链接 `/etc/resolv.conf -> /run/systemd/resolve/stub-resolv.conf` 的方式接管配置文件，该文件会将 `nameserver` 配置为 `127.0.0.53`；该模式为 resolved 推荐的模式；
 2. **static 模式**：使用软链接 `/etc/resolv.conf -> /usr/lib/systemd/resolv.conf` 的方式接管配置文件，该文件会将 `nameserver` 配置为 `127.0.0.53`；
 3. **uplink 模式**：使用软链接 `/etc/resolv.conf -> /run/systemd/resolve/resolv.conf` 的方式接管配置文件，该文件会将 `nameserver` 直接配置为 resolved 已知的上游 DNS 列表，resolved 会时刻保持其中的内容为最新；若应用程序绕过本地接口而直接使用上游 DNS，将不会提供 mDNS 和 LLMNR 等服务；该模式即为 Adguard wiki 中提及的模式；
-4. **foreign 模式**：由其他的软件包或管理员所管理的 `/etc/resolv.conf` 文件，这种情况下 resolved 并不是文件的提供者而是消费者，当 resolved 自己的配置文件[^14]中没有显式指定上游 DNS 时，反而会根据该文件来配置上游 DNS；若文件中 `nameserver` 为 `127.0.0.53`，虽然形式上是 foreign 模式，但实际上等同于 stub 模式。
+4. **foreign 模式**：由其他的软件包或管理员所管理的 `/etc/resolv.conf` 文件，这种情况下 resolved 并不是文件的提供者而是消费者，当 resolved 自己的配置文件[^resolved-conf]中没有显式指定上游 DNS 时，反而会根据该文件来配置上游 DNS；若文件中 `nameserver` 为 `127.0.0.53`，虽然形式上是 foreign 模式，但实际上等同于 stub 模式。
 
 可以使用 `resolvectl status` 命令来查看 `resolv.conf` 的当前模式。
 
@@ -166,14 +169,14 @@ netgroup: files
 - systemd-resolved 自己的配置文件名称为 `resolved.conf`，注意与 `/etc/resolv.conf` 进行区分；
 - 虽然在 man page 中没有提及，但值得说明的是，当 DNSStubListener 处于停用状态时，`stub-resolv.conf` 又会变为软链接指向 `/run/systemd/resolve/resolv.conf`，这种情况下的 stub 模式实际上等同于 uplink 模式；
 
-[^13]: [resolv.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolv.conf.5.en)
-[^14]: [resolved.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolved.conf.5.en)
+[^resolv-conf]: [resolv.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolv.conf.5.en)
+[^resolved-conf]: [resolved.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolved.conf.5.en)
 
 ## 一些有趣的发现
 
 阅读上述相关文档之后，我得到的一些有趣的收获：
 
-1. 在运行有 systemd-resolved 的节点之间，无需额外安装 [Avahi](https://wiki.archlinux.org/title/Avahi) 即可使用 mDNS 功能，即用 `<hostname>.local` 来访问对应的节点；并且还可以使用 LLMNR 功能，即用 `<hostname>` 来访问对应节点；
+1. 在运行有 systemd-resolved 的节点之间，无需额外安装 Avahi 即可使用 mDNS 功能，即用 `<hostname>.local` 来访问对应的节点；并且还可以使用 LLMNR 功能，即用 `<hostname>` 来访问对应节点；
 2. **注**：macOS 开箱支持 mDNS，但不支持 LLMNR；
 3. ping `*.localhost` 总是解析到 `127.0.0.1` 或 `::1`，比如 ping `random-test.localhost`。匹配的通式是 `localhost`、`*.localhost`、`localhost.localdomain`、`*.localhost.localdomain`。
 4. 还有这些特殊的本地名称也是可以 ping 的：
@@ -181,7 +184,7 @@ netgroup: files
    2. `_outbound`：解析到与网关进行通讯的本地地址；
    3. `_localdnsstub` 固定解析到 `127.0.0.53`（无论是否开启了 DNSStubListener）；
    4. `_localdnsproxy` 固定解析到 `127.0.0.54`（无论是否开启了 DNSStubListener）；
-5. tailscale 是通过 D-Bus 接口配合 systemd-resolved 来配置 DNS 的：`tailscale/blob/main/net/dns/resolved.go`[^15]；
+5. tailscale 是通过 D-Bus 接口配合 systemd-resolved 来配置 DNS 的：`tailscale/blob/main/net/dns/resolved.go`[^tailscale-resolved]；
 
 ```log
 Dec 24 21:47:17 chaney-pi3 systemd[1]: Started Network Name Resolution.
@@ -199,11 +202,11 @@ Dec 24 21:50:40 chaney-pi3 systemd-resolved[160303]: Flushed all caches.
 Dec 24 21:51:03 chaney-pi3 systemd-resolved[160303]: Using degraded feature set UDP instead of UDP+EDNS0 for DNS server 100.100.100.100.
 ```
 
-[^15]: [tailscale/net/dns/resolved.go at main · tailscale/tailscale](https://github.com/tailscale/tailscale/blob/main/net/dns/resolved.go)
+[^tailscale-resolved]: [tailscale/net/dns/resolved.go at main · tailscale/tailscale](https://github.com/tailscale/tailscale/blob/main/net/dns/resolved.go)
 
 ## 解决 Adguard DNS 的 53 端口冲突
 
-Adguard 官方 wiki 中给出的方案[^1]，是新增一个 resolved 的 drop-in 配置文件 `/etc/systemd/resolved.conf.d/adguardhome.conf`:
+Adguard 官方 wiki 中给出的方案[^adguard-wiki]，是新增一个 resolved 的 drop-in 配置文件 `/etc/systemd/resolved.conf.d/adguardhome.conf`:
 
 ```ini
 [Resolve]
