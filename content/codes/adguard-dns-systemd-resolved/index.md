@@ -156,7 +156,7 @@ netgroup: files
 
 ## systemd-resolved 接管 /etc/resolv.conf 的方式
 
-如上文中提及的，当程序使用 glibc 访问 DNS 时，DNS 相关信息会在 `/etc/resolv.conf` 文件[^resolv-conf]中进行配置。一些应用程序也可能按照这一惯例来自行实现 `resolv.conf` 配置文件的解析并直接访问 DNS 服务。出于这一原因，为了保持兼容性，systemd-resolved 使用了如下几种形式来接管 `/etc/resolv.conf`：
+如上文中提及的，当程序使用 glibc 访问 DNS 时，DNS 相关信息会在 `/etc/resolv.conf` 文件[^resolv-conf]中进行配置。一些应用程序（比如 golang）也可能按照这一惯例来自行实现 `resolv.conf` 配置文件的解析并直接访问 DNS 服务。出于这一原因，为了保持兼容性，systemd-resolved 使用了如下几种形式来接管 `/etc/resolv.conf`：
 
 1. **stub 模式**：当 DNSStubListener 处于启用状态时，使用软链接 `/etc/resolv.conf -> /run/systemd/resolve/stub-resolv.conf` 的方式接管配置文件，该文件会将 `nameserver` 配置为 `127.0.0.53`；该模式为 resolved 推荐的模式；
 2. **static 模式**：使用软链接 `/etc/resolv.conf -> /usr/lib/systemd/resolv.conf` 的方式接管配置文件，该文件会将 `nameserver` 配置为 `127.0.0.53`；
@@ -165,6 +165,8 @@ netgroup: files
 
 可以使用 `resolvectl status` 命令来查看 `resolv.conf` 的当前模式。
 
+systemd-networkd、NetworkManager 和 iwd 等软件可以通过 `/etc/resolv.conf` 软链接探查到 resolved，并与之配合来完成 DNS 配置。但传统依赖 resolvconf 工具[^resolvconf]的程序则无法配合 resolved 完成配置，需要安装 `systemd-resolvconf` 来伪装 resolvconf 工具[^resolved-arch-wiki]。
+
 **注意**：
 
 - systemd-resolved 自己的配置文件名称为 `resolved.conf`，注意与 `/etc/resolv.conf` 进行区分；
@@ -172,6 +174,8 @@ netgroup: files
 
 [^resolv-conf]: [resolv.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolv.conf.5.en)
 [^resolved-conf]: [resolved.conf(5) — Arch manual pages](https://man.archlinux.org/man/resolved.conf.5.en)
+[^resolvconf]: [resolvconf(8) — Arch manual pages](https://man.archlinux.org/man/resolvconf.8.en)
+[^resolved-arch-wiki]: [systemd-resolved - ArchWiki](https://wiki.archlinux.org/title/Systemd-resolved#Setting_DNS_servers)
 
 ## 一些有趣的发现
 
