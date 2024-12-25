@@ -2,6 +2,7 @@ baseURL: "https://chaneyzorn.github.io/"
 languageCode: "zh"
 defaultContentLanguage: zh
 title: "Chaney's MoonBook"
+titleCaseStyle: none
 theme: "PaperMod"
 
 author:
@@ -45,9 +46,9 @@ params:
   disableThemeToggle: false
 
   ShowReadingTime: true
-  ShowShareButtons: true
+  ShowShareButtons: false
   ShowPostNavLinks: true
-  ShowBreadCrumbs: true
+  ShowBreadCrumbs: false
   ShowCodeCopyButtons: true
   ShowWordCount: true
   ShowRssButtonInSectionTermList: true
