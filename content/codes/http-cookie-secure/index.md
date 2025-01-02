@@ -3,7 +3,7 @@ title: "HTTP Cookies 安全性与 TLS 证书配置"
 date: 2024-12-31T14:30:00+08:00
 isCJKLanguage: true
 draft: false
-tags: ["HTTP", "HTTPS", "Cookie", "api-gateway", "TLS", "Certificate", "encryption"]
+tags: ["HTTP", "HTTPS", "Cookie", "api-gateway", "TLS", "Certificate", "encryption", "Kong gateway"]
 ---
 
 ## 背景
@@ -225,6 +225,8 @@ openssl verify -CAfile ca-home.lan.crt wildcard.home.lan.crt
 
 ## 解决 PVE 页面登录问题
 
+### 将服务器证书导入到 API gateway 中
+
 将上述服务器证书配置于 API gateway 中，并启用 `443` 端口代理即可[^kong-proxy-listen]。我使用的 API gateway 是 Kong（基于 nginx），类似的服务还有 caddy，配置方式需参考具体服务的官方文档。
 
 ```sh
@@ -264,6 +266,26 @@ KONG_PROXY_LISTEN="0.0.0.0:80, 0.0.0.0:443 ssl"
 ![macOS 标记信任证书](./asserts/macos-set-cert-trust.png#center)
 
 重新锁定“系统”钥匙串，并刷新浏览器页面即可生效。
+
+### 指定 Kong `admin_ssl_cert` 使用的证书
+
+Kong 也可以将自己的 [Kong Manager](https://github.com/Kong/kong-manager) 页面代理到 `80/443` 端口，但是前端页面仍然会直接访问到其他非 `80/443` 端口，典型的例子是 Kong Admin API 所在的 `8001/8444` 端口[^kong-default-ports]。这会导致这部分请求不会经过 Kong 的代理端口直接发送到 Admin API 所在的目标端口，继而 `8444` 端口默认使用的 TLS 证书不是我们指定的证书，继而出现 `ERR_CERT_AUTHORITY_INVALID` 错误。
+
+一个解决方法是，让 Kong 再为 `8444` 多监听一个专门用于代理的接口，并为这个代理指定证书，比如:
+
+- 将 `kong.home.lan:80/443` 路由至 `localhost:8002/8445`；
+- 且将 `kong.home.lan:8001/8444` 路由至 `localhost:8001/8444`；
+
+Kong 官方默认不支持仅用端口区分路由逻辑，需要用到插件功能，具体请参考[官方文档](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)[^kong-route-by-port]。
+
+但其实还有一种简单的办法，就是指定 `8444` 端口直接使用前文生成的服务器证书。通过如下配置项指定即可[^kong-self-cert-config]：
+
+- `admin_ssl_cert`/`KONG_ADMIN_SSL_CERT`：指定服务器证书；
+- `admin_ssl_cert_key`/`KONG_ADMIN_SSL_CERT_KEY`：指定服务器密钥；
+
+[^kong-default-ports]: [Default Ports - Kong Gateway | Kong Docs](https://docs.konghq.com/gateway/latest/production/networking/default-ports/)
+[^kong-route-by-port]: [How to route requests regarding incoming request port number | Kong support](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)
+[^kong-self-cert-config]: [How to define SSL Certificates and where you can use them | Kong support](https://support.konghq.com/support/s/article/How-to-define-SSL-Certificates-and-where-you-can-use-them)
 
 ### noVNC 界面也可以正常访问
 

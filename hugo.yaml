@@ -35,7 +35,7 @@ params:
   env: production # to enable google analytics, opengraph, twitter-cards and schema.
   title: "Chaney's MoonBook"
   description: "何夜无月 逝者如斯"
-  keywords: [Blog, PaperMod]
+  keywords: [Blog, Coding, Programming]
   author: ChaneyZorn
   authorInfo:
     name: ChaneyZorn
