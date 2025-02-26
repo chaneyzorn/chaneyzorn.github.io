@@ -70,6 +70,8 @@ end
 
 #### 辅助功能：获取当前窗口的名称和当前输入法的名称
 
+当按下 `ctrl + cmd + .` 时，通过系统通知打印当前窗口的应用名称和输入法名称：
+
 ```lua
 local function setupKeymap()
   hs.hotkey.bind({ "ctrl", "cmd" }, ".", function()
@@ -87,6 +89,8 @@ end
 使用外接显示器，或使用 iPad “随航”时，用鼠标或触摸板拖动窗口到指定显示器，拖拽的路线显得格外漫长。且光标和窗口在显示器之间的穿行带有几分惊险，因为屏幕之间的位移多少带有一些错位。
 
 既然 hammerspoon 已经是我常驻的百宝箱之一，那么用它来解决这个问题就变得非常合适。下面是代码实现，这段代码是豆包 AI 给出的，目前为止我很满意它的效果：
+
+使用 `ctrl + cmd + n` 快捷键将当前窗口在多个显示器之间循环移动：
 
 ```lua
 local function moveWindowToNextScreen()
