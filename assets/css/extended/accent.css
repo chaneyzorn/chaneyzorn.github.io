@@ -404,14 +404,21 @@ details.toc summary:hover .title {
 .terms-tags a {
     padding: 2px 10px;
     font-size: 13px;
-    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
-    box-shadow: var(--shadow-sm);
 }
 
-/* 上/下一篇导航 hover */
+/* 标签计数：与文字同行同大小，用次要色区分；
+   需显式 font-size: inherit 抵消浏览器对嵌套 sup 的双重缩小 */
+.terms-tags a sup {
+    vertical-align: baseline;
+    font-size: inherit;
+    color: var(--secondary);
+}
+
+/* 上/下一篇导航 hover：低饱和琥珀薄涂 */
 .paginav a:hover {
-    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
 }
 
