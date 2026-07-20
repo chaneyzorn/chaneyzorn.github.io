@@ -148,7 +148,7 @@ params:
     location: 0
     distance: 1000
     threshold: 0.2 # 收紧模糊匹配阈值，避免零散字母命中
-    minMatchCharLength: 2 # 至少连续匹配 2 个字符
+    minMatchCharLength: 3 # 至少连续匹配 3 个字符
     ignoreLocation: true # 中文无词边界，全文本范围匹配
     keys: ["title", "permalink", "summary", "content"]
 
