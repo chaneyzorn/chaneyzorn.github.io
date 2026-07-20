@@ -54,7 +54,7 @@ params:
   ShowRssButtonInSectionTermList: true
   ShowFullTextinRSS: true
   UseHugoToc: true
-  disableSpecial1stPost: false
+  disableSpecial1stPost: true # 首篇文章不使用加大卡片，列表样式统一
   disableScrollToTop: false
   comments: true
   hidemeta: false
@@ -76,9 +76,22 @@ params:
     # safari_pinned_tab: "/assets/favicon_io/apple-touch-icon.svg"
 
   label:
-    text: "Chaney's MoonBook"
-    icon: /favicon_io/apple-touch-icon.png
-    iconHeight: 35
+    text: "MoonBook"
+    # icon: /favicon_io/apple-touch-icon.png # 改用下方的 iconSVG
+    # iconHeight: 35
+    # 手绘弦月 SVG：纯色 + 双星，契合 MoonBook 主题
+    iconSVG: >-
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+      <defs>
+      <mask id="mb-c">
+      <rect width="32" height="32" fill="white"/>
+      <circle cx="21" cy="12" r="11" fill="black"/>
+      </mask>
+      </defs>
+      <circle cx="15" cy="17" r="12" fill="#d97706" mask="url(#mb-c)"/>
+      <circle cx="24" cy="6" r="2.4" fill="#f59e0b"/>
+      <circle cx="28.5" cy="11.5" r="1.6" fill="#f59e0b"/>
+      </svg>
 
   profileMode:
     enabled: false
@@ -94,9 +107,9 @@ params:
       - name: Tags
         url: tags
 
-  homeInfoParams:
-    Title: "何夜无月 逝者如斯"
-    Content: "The Dying Moon, Wondering the Dawning."
+  # homeInfoParams: # 首页顶部的标题简介块，注释掉则首页直接显示文章列表
+  #   Title: "何夜无月 逝者如斯"
+  #   Content: "The Dying Moon, Wondering the Dawning."
 
   socialIcons:
     - name: github
@@ -147,22 +160,27 @@ menu:
       name: tags
       url: /tags/
       weight: 10
+      pre: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
     - identifier: archives
       name: archives
       url: /archives/
       weight: 20
+      pre: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>'
     - identifier: search
       name: search
       url: /search/
       weight: 40
+      pre: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
     - identifier: github
       name: github
       url: https://github.com/chaneyzorn
       weight: 50
+      pre: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>'
     - identifier: twitter
       name: twitter
       url: https://twitter.com/campanla
       weight: 60
+      pre: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>'
 
 # Read: https://github.com/adityatelange/hugo-PaperMod/wiki/FAQs#using-hugos-syntax-highlighter-chroma
 markup:
@@ -178,7 +196,7 @@ privacy:
   vimeo:
     disabled: false
     simple: true
-  twitter:
+  x:
     disabled: false
     enableDNT: true
     simple: true
@@ -192,7 +210,7 @@ privacy:
 services:
   instagram:
     disableInlineCSS: true
-  twitter:
+  x:
     disableInlineCSS: true
   rss:
     limit: 100

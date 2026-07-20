@@ -1,0 +1,463 @@
+/* 自定义设计系统：橙/琥珀系强调色 + 暖色纸面 + 悬浮磨砂导航
+   通过 assets/css/extended 机制在主题样式之后加载，仅覆盖变量和规则，不改主题文件 */
+
+/* ===== 设计变量 ===== */
+:root {
+    --theme: rgb(250, 247, 242);       /* 暖白纸面，替代纯白 */
+    --entry: rgb(255, 255, 255);       /* 卡片浮在暖底上 */
+    --border: rgb(238, 229, 216);      /* 暖灰边框 */
+    --code-bg: rgb(246, 240, 231);     /* 行内代码底色同步暖化 */
+    --code-block-bg: rgb(255, 253, 248); /* 代码块：亮色模式用暖白 */
+    --radius: 12px;                    /* 全站圆角从 8px 加大到 12px */
+    --primary: rgb(84, 73, 59);        /* 暖黑，标题主色（调淡两档） */
+    --secondary: rgb(122, 108, 90);    /* 暖灰，次要信息 */
+    --tertiary: rgb(214, 204, 190);    /* 暖浅灰，分隔/底纹 */
+    --content: rgb(76, 66, 52);        /* 正文，比标题柔和一档（调淡一档） */
+    --accent: rgb(217, 119, 6);        /* amber-600，亮色系主强调色 */
+    --accent-soft: rgb(254, 243, 199); /* amber-100，标签等浅色底 */
+    --accent-contrast: rgb(255, 255, 255);
+    --brand: rgb(146, 64, 14);         /* amber-800，品牌文字专用深琥珀 */
+    /* 纯系统字体栈，零外部请求，国内网络无阻碍 */
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+        "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+    --font-serif: "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN",
+        "Songti SC", "STSong", "SimSun", serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas,
+        "Sarasa Mono SC", "Courier New", monospace;
+    --shadow-sm: 0 1px 2px rgba(60, 40, 10, 0.05);
+    --shadow-md: 0 1px 2px rgba(60, 40, 10, 0.04), 0 8px 24px rgba(60, 40, 10, 0.07);
+    --shadow-lg: 0 2px 4px rgba(60, 40, 10, 0.05), 0 16px 40px rgba(217, 119, 6, 0.13);
+}
+
+:root[data-theme="dark"] {
+    --theme: rgb(24, 23, 21);          /* 暖黑 */
+    --entry: rgb(36, 34, 31);          /* 暖深灰卡片 */
+    --border: rgb(59, 54, 46);
+    --code-bg: rgb(48, 44, 38);
+    --code-block-bg: rgb(33, 31, 28);  /* 代码块：暗色模式用暖深灰 */
+    --primary: rgb(232, 224, 212);     /* 暖白 */
+    --secondary: rgb(160, 148, 130);
+    --tertiary: rgb(72, 65, 55);
+    --content: rgb(204, 195, 181);
+    --accent: rgb(251, 191, 36);       /* amber-400，暗色下提亮 */
+    --accent-soft: rgb(69, 50, 16);    /* 暗色下的琥珀底 */
+    --accent-contrast: rgb(24, 23, 21);
+    --brand: rgb(251, 191, 36);        /* 暗色下品牌文字用亮琥珀 */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ===== 全局质感 ===== */
+
+/* 解除主题 reset 中 html { overflow-y: scroll } 对 position: sticky 的阻断；
+   用 scrollbar-gutter 保留"始终预留滚动条宽度"的效果，避免页面左右跳动 */
+html {
+    overflow-y: visible;
+    scrollbar-gutter: stable;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+/* 悬浮导航会遮挡锚点跳转目标，留出余量 */
+[id] {
+    scroll-margin-top: 96px;
+}
+
+/* 键盘导航焦点可见性 */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+/* ===== 字体与排版：标题宋体 + 正文黑体 ===== */
+
+body {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.7;
+}
+
+/* 站点品牌：宋体大字重 + 微字距 + 专属品牌色 */
+.logo a {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--brand);
+}
+
+/* 导航菜单：常规黑体，常规字重 + 微字距，首字母大写 */
+.menu a {
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+}
+
+/* 当前页菜单项也不加粗，靠底色高亮区分 */
+.menu .active {
+    font-weight: 400;
+}
+
+/* 各级标题：黑体（与正文同族），仅靠字重和颜色拉开层次 */
+.post-title,
+.page-header h1,
+.entry-header h1,
+.entry-header h2,
+.home-info h1,
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--primary);
+}
+
+/* 正文长文行高放宽，中文阅读更舒适 */
+.post-content {
+    font-size: 15px; /* 在 body 16px 基础上再小一档 */
+    line-height: 1.8;
+}
+
+/* 引用块：宋体呈现引文质感 */
+.md-content blockquote {
+    font-family: var(--font-serif);
+}
+
+/* 强调文字用 600 而非 700，避免宋体过粗糊成一团 */
+.md-content strong {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* 代码：等宽字体栈 */
+code,
+pre,
+.copy-code {
+    font-family: var(--font-mono);
+}
+
+/* 元信息：次要内容保持黑体细字重，与标题拉开层次 */
+.post-meta,
+.entry-footer,
+.breadcrumbs,
+.post-description {
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+/* ===== 悬浮磨砂导航：左右双胶囊 ===== */
+
+/* 外壳退化为透明的 sticky 定位容器 */
+.header {
+    position: sticky;
+    top: 14px;
+    z-index: 100;
+    width: calc(100% - 28px);
+    max-width: calc(var(--nav-width) + var(--gap) * 2);
+    margin: 14px auto 0;
+}
+
+/* 窄屏折行时两个胶囊之间留出间隙 */
+.header-nav {
+    row-gap: 10px;
+}
+
+/* 两个胶囊共享的磨砂质感 */
+.logo,
+.menu {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(250, 247, 242, 0.72); /* 亮色兜底 */
+    background: color-mix(in srgb, var(--theme) 72%, transparent);
+    backdrop-filter: blur(14px) saturate(1.6);
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="dark"] .logo,
+:root[data-theme="dark"] .menu {
+    background: rgba(24, 23, 21, 0.72); /* 暗色兜底 */
+    background: color-mix(in srgb, var(--theme) 72%, transparent);
+}
+
+/* 左胶囊：品牌（含主题切换按钮），保持 60px 高，补内边距 */
+.logo {
+    padding-inline: 20px;
+}
+
+/* 右胶囊：菜单文字细，胶囊收窄到 44px 高，在行内垂直居中 */
+.menu {
+    align-self: center;
+    line-height: 42px;
+    padding-inline: 18px;
+    column-gap: 16px;
+}
+
+/* 导航链接：hover 与当前页着色 */
+.logo a,
+.menu a,
+.theme-toggle {
+    transition: color 0.15s ease;
+}
+
+.logo a:hover,
+.menu a:hover,
+.theme-toggle:hover {
+    color: var(--accent);
+}
+
+/* 当前页菜单项：低饱和半透明琥珀底 + 琥珀文字，融入磨砂胶囊 */
+.menu .active {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+/* 菜单图标与文字基线对齐 */
+.menu a svg {
+    vertical-align: -2.5px;
+    margin-inline-end: 3px;
+}
+
+/* ===== 首页 / 列表：去卡片化，条目间用淡分割线 ===== */
+
+/* 列表页背景与文章页统一，不再单独铺灰底 */
+.list {
+    background: var(--theme);
+}
+
+.post-entry {
+    margin-bottom: 0;
+    padding: var(--gap) 4px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.post-entry:hover,
+.post-entry:focus-within {
+    transform: none;
+    border-color: var(--border); /* 保持分割线，不做高亮 */
+    box-shadow: none;
+}
+
+/* 列表最后一项不画分割线（分页按钮自成一体） */
+.post-entry:last-of-type {
+    border-bottom: none;
+}
+
+.post-entry:hover .entry-header,
+.post-entry:focus-within .entry-header {
+    color: var(--accent);
+    transition: color 0.2s ease;
+}
+
+/* 标题虚线下划线：hover 时直接显示，无动效 */
+.post-entry .entry-header h2 {
+    display: inline; /* 让虚线只跟随文字宽度，不铺满整行 */
+    padding-bottom: 4px;
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 100% 2px;
+}
+
+.post-entry:hover .entry-header h2,
+.post-entry:focus-within .entry-header h2 {
+    background-image: repeating-linear-gradient(
+        to right,
+        var(--accent) 0 6px,
+        transparent 6px 12px
+    );
+}
+
+/* ===== 字号：正文与标题整体下调一档 ===== */
+
+body {
+    font-size: 16px; /* 主题默认 18px */
+}
+
+.post-title,
+.page-header h1,
+.md-content h1 {
+    font-size: 30px; /* 原 40px */
+}
+
+.md-content h2,
+.first-entry .entry-header h2 {
+    font-size: 25px; /* 原 32/40px */
+}
+
+.first-entry .entry-header h1 {
+    font-size: 28px; /* 原 34px */
+}
+
+.entry-header h2 {
+    font-size: 21px; /* 原 24px，列表卡片标题 */
+}
+
+.md-content h3 {
+    font-size: 20px; /* 原 24px */
+}
+
+.md-content h4 {
+    font-size: 16px;
+}
+
+/* ===== 正文排版细节 ===== */
+
+/* 链接：弱化常态下划线，hover 时加粗显现 */
+.md-content a:not(.anchor) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.25em;
+    transition: text-decoration-color 0.15s ease;
+}
+
+.md-content a:not(.anchor):hover {
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+}
+
+/* h2 细分隔线，给长文结构感 */
+.md-content h2 {
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--border);
+}
+
+/* 标题锚点 hover 用强调色 */
+.anchor:hover {
+    color: var(--accent) !important;
+}
+
+/* 行内代码（pre 内的代码块由主题自己的规则覆盖，不受影响） */
+.post-content code {
+    color: var(--accent);
+}
+
+/* 代码块加描边，从页面中"托"出来 */
+.md-content .highlight:not(table) {
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 主题给 pre code 写死了浅灰文字色（为深色块设计），改为跟随正文色，
+   让亮色代码块可读；各 token 颜色仍由 chroma-styles.css 的类规则控制 */
+.md-content pre code {
+    color: var(--content);
+}
+
+/* 引用块：琥珀边条 + 暖色底 */
+.md-content blockquote {
+    padding: 0.1rem 1rem;
+    border-inline-start: 0.3rem solid var(--accent);
+    background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* ===== 文章页元信息 ===== */
+
+/* 目录：圆角保持主题默认；标题 hover 着色 */
+details.toc summary:hover .title {
+    color: var(--accent);
+}
+
+.toc a:hover {
+    color: var(--accent);
+}
+
+/* 标签：文章页底部标签 + 标签聚合页，整体缩小一档 */
+.post-tags a {
+    padding: 0 12px;
+    font-size: 12px;
+    line-height: 28px;
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-radius: 999px;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.post-tags a:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.terms-tags a {
+    padding: 2px 10px;
+    font-size: 13px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 上/下一篇导航 hover */
+.paginav a:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* ===== 分页按钮：黑底改琥珀底 ===== */
+.pagination a {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pagination a:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ===== 社交图标 ===== */
+.social-icons a {
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.social-icons a:hover {
+    color: var(--accent);
+    transform: translateY(-2px);
+}
+
+/* ===== 回到顶部：灰底改琥珀悬浮按钮 ===== */
+.top-link {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-md);
+    transition: visibility 0.3s, opacity 0.3s cubic-bezier(0.4, 0, 1, 1),
+        transform 0.15s ease;
+}
+
+.top-link:hover {
+    color: var(--accent-contrast);
+    transform: translateY(-2px);
+}
+
+/* ===== 页脚：细分隔线收束页面 ===== */
+.footer {
+    border-top: 1px solid var(--border);
+    margin-top: var(--gap);
+}
+
+.footer a:hover {
+    color: var(--accent);
+}
