@@ -40,10 +40,10 @@
     --secondary: rgb(160, 148, 130);
     --tertiary: rgb(72, 65, 55);
     --content: rgb(204, 195, 181);
-    --accent: rgb(251, 191, 36);       /* amber-400，暗色下提亮 */
+    --accent: rgb(245, 158, 11);       /* amber-500，暗色下比 400 收敛一档 */
     --accent-soft: rgb(69, 50, 16);    /* 暗色下的琥珀底 */
     --accent-contrast: rgb(24, 23, 21);
-    --brand: rgb(251, 191, 36);        /* 暗色下品牌文字用亮琥珀 */
+    --brand: rgb(245, 158, 11);        /* 暗色下品牌文字与 accent 一致 */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.45);
