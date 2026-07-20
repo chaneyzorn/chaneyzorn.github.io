@@ -406,14 +406,25 @@ details.toc summary:hover .title {
     font-size: 13px;
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
-/* 标签计数：与文字同行同大小，用次要色区分；
-   需显式 font-size: inherit 抵消浏览器对嵌套 sup 的双重缩小 */
+/* hover 时底色加深一档，保持淡雅 */
+.terms-tags a:hover {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    color: var(--accent);
+}
+
+/* 标签计数：与文字同行，0.9em 次要色；
+   外层 sup 设 0.9em、内层 sup 继承，避免嵌套 sup 字号叠加缩小 */
 .terms-tags a sup {
     vertical-align: baseline;
     font-size: inherit;
     color: var(--secondary);
+}
+
+.terms-tags a > sup {
+    font-size: 0.9em;
 }
 
 /* 上/下一篇导航 hover：低饱和琥珀薄涂 */
@@ -467,4 +478,78 @@ details.toc summary:hover .title {
 
 .footer a:hover {
     color: var(--accent);
+}
+
+/* ===== 搜索页 ===== */
+
+/* 搜索框：全圆角胶囊，常规字重，聚焦时琥珀描边 */
+.searchbox input {
+    padding: 8px 18px;
+    font-weight: normal;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--entry);
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.searchbox input:focus {
+    border-color: var(--accent);
+    outline: none;
+    /* 琥珀色聚焦光环，替代之前的细描边 */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* 搜索结果：去卡片化，与文章列表一致的淡分割线风格 */
+.searchResults {
+    gap: 0;
+}
+
+.searchResults li {
+    padding: 12px 4px;
+    font-weight: normal;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+}
+
+.searchResults li:last-child {
+    border-bottom: none;
+}
+
+.searchResults li:hover,
+.searchResults li:focus-within {
+    transform: none;
+    color: var(--accent);
+}
+
+/* 结果右侧的双箭头图标弱化 */
+.searchResults li svg {
+    color: var(--secondary);
+    flex-shrink: 0;
+}
+
+/* 结果的标题 + 摘要文本块 */
+.searchResults .res-main {
+    min-width: 0; /* 允许在 flex 中收缩以触发省略号 */
+}
+
+.searchResults .res-title {
+    font-weight: 500;
+}
+
+.searchResults .res-snippet {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 命中关键字高亮：琥珀底，标题内跟随标题色、片段内跟随片段色 */
+.searchResults mark {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+    color: inherit;
 }
