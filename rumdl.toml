@@ -1,0 +1,4 @@
+# rumdl 配置：https://github.com/rvben/rumdl
+# 中文博客行长普遍超过 80 字符，MD013 无实际意义，关闭
+[global]
+disable = ["MD013"]

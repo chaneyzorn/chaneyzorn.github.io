@@ -16,16 +16,24 @@
 
 ## 常用命令
 
+快捷指令已收录在 `justfile`（需安装 [just](https://github.com/casey/just)），用 `just --list` 查看：
+
 ```sh
-hugo server -D                        # 本地预览（含草稿），默认 http://localhost:1313
-hugo new posts/xxx.md                 # 按 archetypes/default.md 模板新建文章
-hugo --gc --minify                    # 生产构建，输出到 public/
-hugo --gc --minify -d /tmp/hugo-verify  # 校验构建：输出到临时目录
+just serve          # 本地预览（含草稿），绑定 0.0.0.0 供局域网远程访问
+just new codes xxx  # 按 archetypes/default.md 模板新建文章
+just build          # 生产构建，输出到 public/
+just verify         # 校验构建：hugo --gc --minify -d /tmp/hugo-verify
+just lint           # markdown lint（rumdl，配置见 rumdl.toml）
+just lint-fix       # 自动修复可修复的 lint 问题
+just theme-update   # 更新 PaperMod 主题 submodule 到上游最新
 ```
 
-**校验构建务必使用 `-d /tmp/hugo-verify`**：直接 `hugo --gc --minify` 会覆盖
-`public/`，与用户正在运行的 `hugo server` 相互干扰。本地验证构建一律输出到
-`/tmp` 下的临时目录，不碰 `public/`。
+**校验构建务必用 `just verify`（即 `hugo --gc --minify -d /tmp/hugo-verify`）**：直接
+`hugo --gc --minify` 会覆盖 `public/`，与用户正在运行的 `hugo server` 相互干扰。
+本地验证构建一律输出到 `/tmp` 下的临时目录，不碰 `public/`。
+
+markdown lint 使用 [rumdl](https://github.com/rvben/rumdl)，配置在 `rumdl.toml`
+（中文长文关闭了 MD013 行长限制）。
 
 ## 目录结构
 
