@@ -131,9 +131,9 @@ body {
     line-height: 1.8;
 }
 
-/* 引用块：宋体呈现引文质感 */
+/* 引用块：黑体，与正文一致 */
 .md-content blockquote {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
 }
 
 /* 强调文字用 600 而非 700，避免宋体过粗糊成一团 */
