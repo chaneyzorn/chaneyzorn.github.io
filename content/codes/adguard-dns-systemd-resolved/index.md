@@ -256,7 +256,7 @@ udp6       0      0 :::5355             :::*             3047/systemd-res
 
 整个系统变得更加和谐，皆大欢喜。
 
-## 参考文档
+## 参考链接
 
 - [Docker · AdguardTeam/AdGuardHome Wiki](https://github.com/AdguardTeam/AdGuardHome/wiki/Docker#resolved)
 - [systemd-resolved(8) — Arch manual pages](https://man.archlinux.org/man/systemd-resolved.8)

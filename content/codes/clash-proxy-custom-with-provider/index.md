@@ -119,7 +119,7 @@ rules:
 
 我并没有将 Clash 中的 DNS 配置指定为自己使用的 AdguardHome server，因为外出活动时无法访问到家庭网络环境，因此我只保留了默认的 DNS 配置。
 
-## 参考文档
+## 参考链接
 
 - [AdguardHome](https://github.com/AdguardTeam/AdGuardHome)
 - [clash 配置说明](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml)

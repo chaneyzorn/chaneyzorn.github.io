@@ -128,7 +128,7 @@ hs.hotkey.bind({ "ctrl", "cmd" }, "n", moveWindowToNextScreen)
 
 更多用法，可以查看 hammperspoon 官网提供的接口文档。另外推荐一个可以参考更多用法的仓库：[wangshub/hammerspoon-config](https://github.com/wangshub/hammerspoon-config)
 
-## 参考文档
+## 参考链接
 
 - [Hammerspoon](https://www.hammerspoon.org/) 官网
 - [Hammerspoon Docs](https://www.hammerspoon.org/docs/index.html) 官网文档

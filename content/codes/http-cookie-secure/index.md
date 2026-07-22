@@ -275,7 +275,7 @@ Kong 官方默认不支持仅用端口区分路由逻辑，需要用到插件功
 
 ![使用 https 访问 API gateway](./asserts/https-api-gateway.svg#center)
 
-## 参考文档
+## 参考链接
 
 - [Secure cookie configuration - Security on the web | MDN](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#secure)
 - [pve-manager/www/mobile/WidgetToolkitUtils.js — GitHub](https://github.com/proxmox/pve-manager/blob/master/www/mobile/WidgetToolkitUtils.js)
