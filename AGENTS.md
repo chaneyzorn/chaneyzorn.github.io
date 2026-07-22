@@ -43,6 +43,7 @@ markdown lint 使用 [rumdl](https://github.com/rvben/rumdl)，配置在 `rumdl.
 - `archetypes/default.md` — 新文章的 front matter 模板
 - `layouts/_default/rss.xml` — 对主题 RSS 模板的自定义覆盖
 - `layouts/_partials/header.html` — 覆盖主题头部模板：菜单图标（`.Pre`）移出 `span.active`，使当前页高亮只包文字（主题升级时需人工同步）
+- `layouts/_partials/extend_footer.html` — 主题的自定义注入点：窄屏滚动方向感知的导航自动显隐 JS（配合 accent.css 的 `.scroll-down` 规则）
 - `assets/css/extended/accent.css` — 自定义设计系统（配色/字体/导航/列表等），PaperMod 会在主题样式之后自动加载
 - `assets/css/includes/chroma-styles.css` — 亮/暗双主题代码高亮，覆盖主题同名文件（亮色 solarized-light + 暗色 gruvbox，暗色红色有手工补丁，见文件头注释）
 - `assets/js/fastsearch.js` — 搜索结果渲染的自定义 fork（标题+摘要/命中上下文+关键字高亮），覆盖主题同名文件，**主题升级时需人工同步**

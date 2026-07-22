@@ -1,0 +1,17 @@
+{{/* 自定义：窄屏下滚动方向感知的导航自动显隐。
+     向下滚动时给根元素加 scroll-down class（配合 accent.css 隐藏品牌/菜单），
+     向上滚动时移除。仅在 ≤768px 有媒体查询规则生效，桌面端无影响。 */}}
+<script>
+    (() => {
+        let lastY = window.scrollY;
+        const threshold = 8; // 忽略微小抖动
+
+        window.addEventListener('scroll', () => {
+            const y = window.scrollY;
+            if (Math.abs(y - lastY) < threshold) return;
+            // 页首始终显示；向下滚隐藏，向上滚显示
+            document.documentElement.classList.toggle('scroll-down', y > lastY && y > 60);
+            lastY = y;
+        }, { passive: true });
+    })();
+</script>

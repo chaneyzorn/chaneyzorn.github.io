@@ -213,6 +213,23 @@ pre,
         justify-content: center;
     }
 
+    /* 滚动显隐的过渡动画（JS 见 extend_footer.html）。
+       注意不能 transform .header：fixed 的 .menu 在其内部，
+       祖先 transform 会把 menu 的包含块从视口改为 header */
+    .logo,
+    .menu {
+        transition: transform 0.3s ease;
+    }
+
+    /* 向下滚动：品牌向上滑出、菜单向下滑出；向上滚动时 class 移除，自动归位 */
+    .scroll-down .logo {
+        transform: translateY(calc(-100% - 28px));
+    }
+
+    .scroll-down .menu {
+        transform: translateY(calc(100% + 14px));
+    }
+
     /* 菜单胶囊固定到窗口底部，左右留白与顶部导航呼应 */
     .menu {
         position: fixed;
