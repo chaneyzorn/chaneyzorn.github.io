@@ -127,7 +127,7 @@ body {
 
 /* 正文长文行高放宽，中文阅读更舒适 */
 .post-content {
-    font-size: 15px; /* 在 body 16px 基础上再小一档 */
+    font-size: 16px; /* 比 body 略小一档时为 15px，现调回 16px */
     line-height: 1.8;
 }
 
@@ -350,6 +350,7 @@ body {
 
 /* 行内代码（pre 内的代码块由主题自己的规则覆盖，不受影响） */
 .post-content code {
+    font-size: 0.85em; /* 主题默认 0.78em，调大一档 */
     color: var(--accent);
 }
 
