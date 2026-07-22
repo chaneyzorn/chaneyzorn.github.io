@@ -206,6 +206,54 @@ pre,
     column-gap: 16px;
 }
 
+/* 窄屏（胶囊堆叠）时：品牌居中吸顶，菜单竖排并粘滞到窗口底部 */
+@media screen and (max-width: 768px) {
+    /* 菜单脱离文档流后，品牌胶囊独占一行并水平居中 */
+    .header-nav {
+        justify-content: center;
+    }
+
+    /* 菜单胶囊固定到窗口底部，左右留白与顶部导航呼应 */
+    .menu {
+        position: fixed;
+        bottom: 14px;
+        left: 14px;
+        right: 14px;
+        z-index: 100;
+        justify-content: safe center; /* 居中；溢出时回退为从左开始，不裁掉首项 */
+        align-items: center;          /* 垂直居中 */
+        line-height: 1.2;
+        padding: 6px 18px;
+    }
+
+    /* 页面底部留白，滚动到底时内容不被菜单遮挡 */
+    body {
+        padding-bottom: 90px;
+    }
+
+    .menu a {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        font-size: 0; /* 消除外链项残留 &nbsp; 产生的空行高度 */
+    }
+
+    .menu a span {
+        font-size: 12px;
+    }
+
+    .menu a svg {
+        margin-inline-end: 0;
+    }
+}
+
+/* 隐藏菜单外链项（github/twitter）后的跳转指示箭头（span 之后的 svg），
+   注意不能误伤 span 之前的菜单图标 */
+.menu a > span ~ svg {
+    display: none;
+}
+
 /* 导航链接：hover 与当前页着色 */
 .logo a,
 .menu a,
@@ -219,13 +267,18 @@ pre,
     color: var(--accent);
 }
 
-/* 当前页菜单项：低饱和半透明琥珀底 + 琥珀文字，融入磨砂胶囊 */
+/* 当前页菜单项：小胶囊底色高亮（只包文字，图标在 span 外不参与底色） */
 .menu .active {
     padding: 4px 12px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--accent) 14%, transparent);
     color: var(--accent);
     text-decoration: none;
+}
+
+/* 当前页的图标（在 span 外）同步着色 */
+.menu a:has(span.active) {
+    color: var(--accent);
 }
 
 /* 菜单图标与文字基线对齐 */
