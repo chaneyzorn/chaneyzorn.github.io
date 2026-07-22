@@ -6,8 +6,6 @@ draft: false
 tags: ["clash", "proxy", "adguard"]
 ---
 
-## 背景
-
 在前面的文章中有提到，我正在使用 [AdguardHome](https://github.com/AdguardTeam/AdGuardHome) 作为家庭环境的 DNS server。它除了基本的 DNS 功能，更重要的是它的广告过滤功能，这个功能是基于屏蔽特定域名解析实现的。
 
 最近我尝试屏蔽一些少儿不宜的网站，但是我发现这些域名并没有被 AdguardHome DNS server 解析并屏蔽。由此我意识到，有一部分网站是通过代理来发送请求的，需要在代理侧做同样的屏蔽处理。

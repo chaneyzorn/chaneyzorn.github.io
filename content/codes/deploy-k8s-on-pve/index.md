@@ -6,8 +6,6 @@ draft: false
 tags: ["kubernetes", "kubeadm", "pve", "proxmox", "containerd", "cilium", "selfhosted"]
 ---
 
-## 背景
-
 手头有一台 PVE（Proxmox VE）宿主机，希望在其上创建 3 台 Ubuntu 虚拟机，搭建一个 1 控制面 + 2 工作节点的 Kubernetes 集群，用于学习和测试。
 
 国内环境的主要障碍是网络：k8s 官方 apt 源（pkgs.k8s.io）、镜像仓库（registry.k8s.io、quay.io、docker.io）以及 GitHub raw 均无法直接稳定访问，需要全程替换为国内镜像。本文使用的替代方案：

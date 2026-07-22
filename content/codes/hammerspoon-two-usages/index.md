@@ -10,7 +10,7 @@ tags: ["macOS", "hammerspoon", "lua", "IME"]
 
 ![Hammerspoon](asserts/hammerspoon.png#center)
 
-### 场景一：锁定指定程序的输入法
+## 场景一：锁定指定程序的输入法
 
 在我对英语阅读和书写越发熟悉之后，我越来越乐意用纯英文环境来摆脱输入法切换的麻烦，至少在 terminal 和 vim 的环境中是这样的。在 linux 上我使用的工具是 [lilydjwg/fcitx.vim](https://github.com/lilydjwg/fcitx.vim)，但是在 macOS 下需要另找一个方法。
 
@@ -23,7 +23,7 @@ tags: ["macOS", "hammerspoon", "lua", "IME"]
 
 最重要的，hammerspoon 使用 lua 进行配置，可以实现灵活且精细的逻辑。如果你正在使用 neovim 和 wezterm，你一定知道我在说什么。下面是功能的代码实现。
 
-#### 在窗口聚焦时切换到指定输入法
+### 在窗口聚焦时切换到指定输入法
 
 ```lua
 local function setupAppWatch()
@@ -45,7 +45,7 @@ local function setupAppWatch()
 end
 ```
 
-#### 意外切换输入法时将其自动纠正回来
+### 意外切换输入法时将其自动纠正回来
 
 ```lua
 local function setupImeWatch()
@@ -68,7 +68,7 @@ local function setupImeWatch()
 end
 ```
 
-#### 辅助功能：获取当前窗口的名称和当前输入法的名称
+### 辅助功能：获取当前窗口的名称和当前输入法的名称
 
 当按下 `ctrl + cmd + .` 时，通过系统通知打印当前窗口的应用名称和输入法名称：
 
@@ -84,7 +84,7 @@ local function setupKeymap()
 end
 ```
 
-### 场景二：使用快捷键将当前窗口在多个显示器之间循环移动
+## 场景二：使用快捷键将当前窗口在多个显示器之间循环移动
 
 使用外接显示器，或使用 iPad “随航”时，用鼠标或触摸板拖动窗口到指定显示器，拖拽的路线显得格外漫长。且光标和窗口在显示器之间的穿行带有几分惊险，因为屏幕之间的位移多少带有一些错位。
 
@@ -122,7 +122,7 @@ end
 hs.hotkey.bind({ "ctrl", "cmd" }, "n", moveWindowToNextScreen)
 ```
 
-### 最后
+## 最后
 
 完整的配置在我的 dotfile 仓库中：[chaneyzorn/dotfiles - hammerspoon](https://github.com/chaneyzorn/dotfiles/tree/master/hammerspoon/.hammerspoon)
 

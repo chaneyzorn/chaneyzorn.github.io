@@ -6,8 +6,6 @@ draft: false
 tags: ["HTTP", "HTTPS", "Cookie", "api-gateway", "TLS", "Certificate", "encryption", "Kong gateway"]
 ---
 
-## 背景
-
 书接[上回](../adguard-dns-systemd-resolved/)，我将一些服务经过 API gateway 统一代理之后，便可以省略端口仅使用自定义域名来访问这些服务了。但是当我使用 Chrome 打开 `http://pve.home.lan/` 页面并输入账号密码之后，PVE 页面却报出 `Connection error 401: No ticket`。
 
 ![PVE 401](./asserts/http-401-no-ticket.png#center)
