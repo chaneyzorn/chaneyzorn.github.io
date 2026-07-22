@@ -20,27 +20,21 @@ tags: ["HTTP", "HTTPS", "Cookie", "api-gateway", "TLS", "Certificate", "encrypti
 
 ## Cookies 的 Secure 属性
 
-网上查询 Cookies 在 HTTP 和 HTTPS 上的差异之后，我在 MDN 上确认了 Cookies 的 `Secure` 属性——**被标记为 `Secure` 的 Cookies 只能在 HTTPS 上发送**：
+网上查询 Cookies 在 HTTP 和 HTTPS 上的差异之后，我在 [MDN](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#secure) 上确认了 Cookies 的 `Secure` 属性——**被标记为 `Secure` 的 Cookies 只能在 HTTPS 上发送**：
 
-> **Secure**: All cookies must be set with the Secure directive, indicating that they should only be sent over HTTPS.[^mdn-secure-cookies]
-
-[^mdn-secure-cookies]: [Secure cookie configuration - Security on the web | MDN](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#secure)
+> **Secure**: All cookies must be set with the Secure directive, indicating that they should only be sent over HTTPS.
 
 通过 Chrome 的 `DevTools - Application - Cookies` 查看 Cookies 信息，可以明确看到名称为 `PVEAuthCookie` 的 Cookie 是标记为 `Secure` 的：
 
 ![DevTools Cookies Secure](./asserts/devtools-cookie-secure.png#center)
 
-查看 pve-manager 的源代码，也可以确认 Cookie 是主动标记为 `Secure` 的[^pve-manager-wiget]：
+查看 pve-manager 的[源代码](https://github.com/proxmox/pve-manager/blob/master/www/mobile/WidgetToolkitUtils.js)，也可以确认 Cookie 是主动标记为 `Secure` 的：
 
 ![pve-manager 设置 Cookies 为 Secure](./asserts/pve-manager-cookies-set-secure.png#center)
 
-[^pve-manager-wiget]: [pve-manager/www/mobile/WidgetToolkitUtils.js at master · proxmox/pve-manager](https://github.com/proxmox/pve-manager/blob/master/www/mobile/WidgetToolkitUtils.js)
-
-> Specify `true` to indicate that the cookie should only be accessible via SSL on a page using the HTTPS protocol.[^pve-manager-set-cookie]
+> Specify `true` to indicate that the cookie should only be accessible via SSL on a page using the HTTPS protocol.（[参考：pve-manager/Cookies.js](https://github.com/proxmox/pve-manager/blob/master/www/mobile/Cookies.js)）
 
 ![pve-manager 的 Ext.util.Cookies](./asserts/pve-manager-util-cookies.png#center)
-
-[^pve-manager-set-cookie]: [pve-manager/www/mobile/Cookies.js at master · proxmox/pve-manager](https://github.com/proxmox/pve-manager/blob/master/www/mobile/Cookies.js)
 
 具体的设置方式，简化后只有一行代码：
 
@@ -98,13 +92,9 @@ TLS 协议的核心是`对称加密`和`非对称加密`：
 - **CA 私钥（`ca.key`）**：证书签发机构（Certificate Authority）对下级机构的证书签名请求（CSR - Certificate Signing Request：域名等信息+下级机构的公钥）进行签名时使用的私钥。不对外公开。
 - **CA 证书（`ca.crt`）**：类似于服务器证书，包含 CA 的公钥信息，可用于解密私钥的签名。根 CA 证书预先内置于浏览器中，供浏览器验证目标服务器证书的签名，**确保服务器证书的所有者正是域名&服务器的所有者**。根 CA 的证书一般不再有更上级的机构为其签名，因此根 CA 的证书是使用自己的私钥进行签名的**自签名证书**。对外公开。
 
-HTTPS 详细背景和科普可以参考 Youtube 上的《HTTPS, SSL, TLS & Certificate Authority Explained》[^youtube-https-explain]。
+HTTPS 详细背景和科普可以参考 Youtube 上的[《HTTPS, SSL, TLS & Certificate Authority Explained》](https://www.youtube.com/watch?v=EnY6fSng3Ew)。
 
-[^youtube-https-explain]: [HTTPS, SSL, TLS & Certificate Authority Explained - YouTube](https://www.youtube.com/watch?v=EnY6fSng3Ew)
-
-浏览器与服务器的 TLS 握手流程可以参考 Youtube 上的 《TLS Handshake - EVERYTHING that happens when you visit an HTTPS website》[^youtube-tls-handshake]。
-
-[^youtube-tls-handshake]: [TLS Handshake - EVERYTHING that happens when you visit an HTTPS website - YouTube](https://www.youtube.com/watch?v=ZkL10eoG1PY)
+浏览器与服务器的 TLS 握手流程可以参考 Youtube 上的[《TLS Handshake - EVERYTHING that happens when you visit an HTTPS website》](https://www.youtube.com/watch?v=ZkL10eoG1PY)。
 
 ## 生成证书文件
 
@@ -134,11 +124,7 @@ CA 签发证书不是无条件的，只有使用某种方式向 CA 证明自己�
 
 我目前尚未注册任何公开访问的域名。符合心意且未被注册的域名一般都比较昂贵，也很难和我之前的自定义域名相匹配，因此我选择自己生成证书文件——这也意味着这个证书将不会得到权威 CA 的背书。
 
-假如我们要签发的域名是 `*.home.lan`，以下步骤参考自 internal-contstrained-pki[^internal-contstrained-pki]，它的特点是限定了生成的 CA 证书只能用于特定域名范围的签发和验证（`nameConstraints`），它也提供了一些参考文档[^name-contstraints]。
-
-[^internal-contstrained-pki]: [nh2/internal-contstrained-pki: Safely shareable TLS root CA for .internal networks using Name Constraints](https://github.com/nh2/internal-contstrained-pki)
-
-[^name-contstraints]: [Private CA with X.509 Name Constraints | System Overlord](https://systemoverlord.com/2020/06/14/private-ca-with-x-509-name-constraints.html)
+假如我们要签发的域名是 `*.home.lan`，以下步骤参考自 [internal-contstrained-pki](https://github.com/nh2/internal-contstrained-pki)，它的特点是限定了生成的 CA 证书只能用于特定域名范围的签发和验证（`nameConstraints`），它也提供了一些[参考文档](https://systemoverlord.com/2020/06/14/private-ca-with-x-509-name-constraints.html)。
 
 生成 CA 密钥 `ca-home.lan.key`：
 
@@ -227,26 +213,22 @@ openssl verify -CAfile ca-home.lan.crt wildcard.home.lan.crt
 
 ### 将服务器证书导入到 API gateway 中
 
-将上述服务器证书配置于 API gateway 中，并启用 `443` 端口代理即可[^kong-proxy-listen]。我使用的 API gateway 是 Kong（基于 nginx），类似的服务还有 caddy，配置方式需参考具体服务的官方文档。
+将上述服务器证书配置于 API gateway 中，并启用 `443` 端口代理即可（[参考：Kong proxy_listen](https://docs.konghq.com/gateway/3.9.x/reference/configuration/#proxy_listen)）。我使用的 API gateway 是 Kong（基于 nginx），类似的服务还有 caddy，配置方式需参考具体服务的官方文档。
 
 ```sh
 KONG_PROXY_LISTEN="0.0.0.0:80, 0.0.0.0:443 ssl"
 ```
-
-[^kong-proxy-listen]: [Configuration Reference for Kong Gateway - v3.9.x proxy_listen | Kong Docs](https://docs.konghq.com/gateway/3.9.x/reference/configuration/#proxy_listen)
 
 ![Kong 证书配置](./asserts/kong-cert-config.png#center)
 ![Kong 证书填写](./asserts/kong-cert-fill.png#center)
 
 ### 什么是 SNI？
 
-我在 Kong Manager 的配置界面上发现了 SNIs 这个选项，它是什么含义呢？Cloudflare 解释如下[^cloudflare-sni]：
+我在 Kong Manager 的配置界面上发现了 SNIs 这个选项，它是什么含义呢？[Cloudflare 的解释](https://www.cloudflare-cn.com/learning/ssl/what-is-sni/)如下：
 
 > 当多个网站托管在一台服务器上并共享一个 IP 地址，并且每个网站都有自己的SSL证书，在客户端设备尝试安全地连接到其中一个网站时，服务器可能不知道显示哪个SSL证书。这是因为SSL/TLS握手发生在客户端设备通过HTTP指示连接到某个网站之前。
 >
 > 服务器名称指示 (SNI) 旨在解决此问题。SNI 是 TLS 协议（以前称为 SSL 协议）的扩展，该协议在 HTTPS 中使用。它包含在 TLS/SSL 握手流程中，以确保客户端设备能够看到他们尝试访问的网站的正确 SSL 证书。该扩展使得可以在 TLS 握手期间指定网站的主机名或域名 ，而不是在握手之后打开 HTTP 连接时指定。
-
-[^cloudflare-sni]: [什么是SNI？TLS服务器名称指示如何工作 | Cloudflare](https://www.cloudflare-cn.com/learning/ssl/what-is-sni/)
 
 ### 浏览器导入根证书
 
@@ -269,23 +251,19 @@ KONG_PROXY_LISTEN="0.0.0.0:80, 0.0.0.0:443 ssl"
 
 ### 指定 Kong `admin_ssl_cert` 使用的证书
 
-Kong 也可以将自己的 [Kong Manager](https://github.com/Kong/kong-manager) 页面代理到 `80/443` 端口，但是前端页面仍然会直接访问到其他非 `80/443` 端口，典型的例子是 Kong Admin API 所在的 `8001/8444` 端口[^kong-default-ports]。这会导致这部分请求不会经过 Kong 的代理端口直接发送到 Admin API 所在的目标端口，继而 `8444` 端口默认使用的 TLS 证书不是我们指定的证书，继而出现 `ERR_CERT_AUTHORITY_INVALID` 错误。
+Kong 也可以将自己的 [Kong Manager](https://github.com/Kong/kong-manager) 页面代理到 `80/443` 端口，但是前端页面仍然会直接访问到其他非 `80/443` 端口，典型的例子是 Kong Admin API 所在的 `8001/8444` 端口（[参考：Kong Default Ports](https://docs.konghq.com/gateway/latest/production/networking/default-ports/)）。这会导致这部分请求不会经过 Kong 的代理端口直接发送到 Admin API 所在的目标端口，继而 `8444` 端口默认使用的 TLS 证书不是我们指定的证书，继而出现 `ERR_CERT_AUTHORITY_INVALID` 错误。
 
 一个解决方法是，让 Kong 再为 `8444` 多监听一个专门用于代理的接口，并为这个代理指定证书，比如:
 
 - 将 `kong.home.lan:80/443` 路由至 `localhost:8002/8445`；
 - 且将 `kong.home.lan:8001/8444` 路由至 `localhost:8001/8444`；
 
-Kong 官方默认不支持仅用端口区分路由逻辑，需要用到插件功能，具体请参考[官方文档](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)[^kong-route-by-port]。
+Kong 官方默认不支持仅用端口区分路由逻辑，需要用到插件功能，具体请参考[官方文档](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)。
 
-但其实还有一种简单的办法，就是指定 `8444` 端口直接使用前文生成的服务器证书。通过如下配置项指定即可[^kong-self-cert-config]：
+但其实还有一种简单的办法，就是指定 `8444` 端口直接使用前文生成的服务器证书。通过如下配置项指定即可（[参考：Kong SSL Certificates](https://support.konghq.com/support/s/article/How-to-define-SSL-Certificates-and-where-you-can-use-them)）：
 
 - `admin_ssl_cert`/`KONG_ADMIN_SSL_CERT`：指定服务器证书；
 - `admin_ssl_cert_key`/`KONG_ADMIN_SSL_CERT_KEY`：指定服务器密钥；
-
-[^kong-default-ports]: [Default Ports - Kong Gateway | Kong Docs](https://docs.konghq.com/gateway/latest/production/networking/default-ports/)
-[^kong-route-by-port]: [How to route requests regarding incoming request port number | Kong support](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)
-[^kong-self-cert-config]: [How to define SSL Certificates and where you can use them | Kong support](https://support.konghq.com/support/s/article/How-to-define-SSL-Certificates-and-where-you-can-use-them)
 
 ### noVNC 界面也可以正常访问
 
@@ -298,3 +276,16 @@ Kong 官方默认不支持仅用端口区分路由逻辑，需要用到插件功
 ![使用 https 访问 API gateway](./asserts/https-api-gateway.svg#center)
 
 ## 参考文档
+
+- [Secure cookie configuration - Security on the web | MDN](https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#secure)
+- [pve-manager/www/mobile/WidgetToolkitUtils.js — GitHub](https://github.com/proxmox/pve-manager/blob/master/www/mobile/WidgetToolkitUtils.js)
+- [pve-manager/www/mobile/Cookies.js — GitHub](https://github.com/proxmox/pve-manager/blob/master/www/mobile/Cookies.js)
+- [HTTPS, SSL, TLS & Certificate Authority Explained — YouTube](https://www.youtube.com/watch?v=EnY6fSng3Ew)
+- [TLS Handshake - EVERYTHING that happens when you visit an HTTPS website — YouTube](https://www.youtube.com/watch?v=ZkL10eoG1PY)
+- [nh2/internal-contstrained-pki — GitHub](https://github.com/nh2/internal-contstrained-pki)
+- [Private CA with X.509 Name Constraints — System Overlord](https://systemoverlord.com/2020/06/14/private-ca-with-x-509-name-constraints.html)
+- [Configuration Reference for Kong Gateway: proxy_listen — Kong Docs](https://docs.konghq.com/gateway/3.9.x/reference/configuration/#proxy_listen)
+- [什么是 SNI？TLS 服务器名称指示如何工作 — Cloudflare](https://www.cloudflare-cn.com/learning/ssl/what-is-sni/)
+- [Default Ports — Kong Docs](https://docs.konghq.com/gateway/latest/production/networking/default-ports/)
+- [How to route requests regarding incoming request port number — Kong support](https://support.konghq.com/support/s/article/How-to-route-requests-regarding-incoming-request-port-number)
+- [How to define SSL Certificates and where you can use them — Kong support](https://support.konghq.com/support/s/article/How-to-define-SSL-Certificates-and-where-you-can-use-them)
