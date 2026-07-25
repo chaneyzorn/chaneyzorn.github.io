@@ -1,0 +1,5 @@
+{{/* Mermaid 代码块渲染钩子：```mermaid 代码块渲染为图表容器，
+     由 extend_footer.html 中的脚本检测并渲染 */}}
+<pre class="mermaid">
+    {{- .Inner | safeHTML -}}
+</pre>
