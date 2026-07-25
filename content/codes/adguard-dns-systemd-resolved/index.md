@@ -1,5 +1,5 @@
 ---
-title: "Adguard DNS 与 systemd-resolved 配置"
+title: "Adguard DNS 与 systemd-resolved"
 date: 2024-12-24T14:37:03+08:00
 isCJKLanguage: true
 draft: false
