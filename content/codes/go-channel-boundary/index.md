@@ -2,7 +2,7 @@
 title: "Go Channel 的边界行为"
 date: 2026-07-26T10:50:39+08:00
 isCJKLanguage: true
-draft: true
+draft: false
 tags: ["go", "concurrency", "channel"]
 ---
 
