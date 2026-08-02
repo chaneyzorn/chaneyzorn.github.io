@@ -302,7 +302,7 @@ def constant_time_compare(a: bytes, b: bytes) -> bool:
 - [A Future-Adaptable Password Scheme](https://www.usenix.org/legacy/events/usenix99/provos.html) bcrypt 原始论文（USENIX 1999）
 - [Stronger Key Derivation via Sequential Memory-Hard Functions](https://www.tarsnap.com/scrypt/scrypt.pdf) scrypt 原始论文
 - [NIST SP 800-132](https://csrc.nist.gov/pubs/sp/800/132/final) PBKDF2 的正式标准
-- [PHC string format 规范](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) `$id$param$salt$hash` 编码格式的定义
+- [PHC string format 规范](https://github.com/C2SP/C2SP/blob/main/phc-strings.md) `$id$param$salt$hash` 编码格式的定义
 - [Making a Faster Cryptanalytic Time-Memory Trade-Off](https://doi.org/10.1007/978-3-540-45146-4_36) 彩虹表原始论文（Oechslin, CRYPTO 2003）
 - [Python hmac.compare_digest](https://docs.python.org/3/library/hmac.html#hmac.compare_digest) 官方文档
 - [Go crypto/subtle](https://pkg.go.dev/crypto/subtle) 官方文档
