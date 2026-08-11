@@ -13,7 +13,7 @@ tags: ["go", "microservices", "grpc", "connect-rpc", "grpc-gateway", "openapi", 
 - 校验信息注解对比：grpc-gateway OpenAPI 注解 vs Protovalidate 注解
 - ORM 框架对比：ent vs GORM
 - 状态码风格对比：HTTP/gRPC status code vs 自定义信封
-- web 层框架对比：gin / chi / echo / kratos-http
+- web 层框架对比：[gin](https://github.com/gin-gonic/gin) / [chi](https://github.com/go-chi/chi) / [echo](https://github.com/labstack/echo) / [kratos](https://github.com/go-kratos/kratos) `protoc-gen-go-http`
 - go-kratos 生态的默认技术栈与推荐的 service 层次划分
 
 authx 的方案做得更早，后来引入 api-server 作为管理面的统一 HTTP 入口，由它代理所有管理面请求，与 authx 等下游服务之间主要走 gRPC。authx 的几个决策也因此被重新评估的。下文有些对比来自实际编码体验（ent、kratos 分层），有些停留在调研结论（OpenAPI 生成器、Connect-RPC 的大部分论据）。
@@ -342,30 +342,47 @@ message GetSessionResponseData {
 
 几个前提同时成立时，这个方案才干净：所有下游统一了信封格式、网关保持轻量（不深入业务语义）、前端是内部团队，可以接受「看 retcode 不看 status」的约定。前提一旦变化（比如开放给外部开发者），矛盾会首先集中在 HTTP 语义缺失这一侧。
 
-## 5. gin / chi / echo / kratos-http
+## 5. gin / chi / echo / kratos protoc-gen-go-http
 
-### 5.1 网关选 chi 的理由
+在 proto-first 架构下，HTTP 框架不再承载业务语义，只是生成 handler 或网关路由的运行载体。选型标准因此也和传统 Web 项目不同。
 
-api-server 的外层路由选了 [chi](https://github.com/go-chi/chi)，核心考量是与 gRPC-Gateway 的配合：
+### 5.1 chi：api-server 的最外层路由
+
+api-server 需要的是一个能和 gRPC-Gateway 无缝配合的路由层。选 [chi](https://github.com/go-chi/chi)，关键原因是它只聚焦「路由 + 中间件」，不引入额外的请求模型：
 
 - chi 基于标准 `net/http`，中间件签名是 `func(http.Handler) http.Handler`，可以直接挂载 gRPC-Gateway 生成的 `http.Handler`；
-- [Gin](https://github.com/gin-gonic/gin) 引入 `*gin.Context` 和自己的一套绑定、渲染、错误处理模型，会与 gRPC-Gateway 的 `runtime.ServeMux` 以及统一信封错误模型形成**两套语义**；
-- 这个项目不需要 Gin 的模板、表单绑定、验证等能力，chi 的轻量路由足够覆盖 gateway、health、OpenAPI、Custom Handler 几个入口。
+- [Gin](https://github.com/gin-gonic/gin) 是一整套 Web 框架，有自己的上下文、绑定、渲染、验证和错误处理模型，会与 gRPC-Gateway 的 `runtime.ServeMux` 以及统一信封模型形成**两套语义**；
+- 这个项目不需要 Gin 的模板、表单绑定、验证等能力，chi 的路由能力足够覆盖 gateway、health、OpenAPI、Custom Handler 几个入口。
 
-配套的原则是「只保留 `net/http` 外层路由，不维护第二套请求和错误模型」——业务语义全在 gRPC/信封一侧，HTTP 层只是挂载点。
+这样业务语义全在 gRPC/信封一侧，HTTP 层只保留 `net/http` 外层路由即可，不需要维护第二套请求和错误模型。
 
-### 5.2 authx 原设计选 gin 的理由
+### 5.2 Gin：在 authx 里被收窄到 HTTP-only 端点
 
-authx 原设计里选了 [Gin](https://github.com/gin-gonic/gin)，理由同样是「与 new-api 同栈」，但职责被刻意收窄：只承载 OAuth callback、JWKS、well-known 这几个 HTTP-only 端点的路由和中间件（CORS、Recovery、访问日志），connect handler 用 `gin.WrapH` 挂进来共用端口。如 1.4 所述，这些端点后来都委托给了 api-server，Gin 在 authx 里也就失去了存在必要。
+authx 对 Web 框架的需求比网关更窄。原设计里选了 [Gin](https://github.com/gin-gonic/gin)，理由同样是「与 new-api 同栈」，但职责被刻意收窄：只承载 OAuth callback、JWKS、well-known 这几个 HTTP-only 端点的路由和中间件（CORS、Recovery、访问日志），connect handler 用 `gin.WrapH` 挂进来共用端口。这些端点后来都委托给了 api-server，Gin 在 authx 里也就失去了存在必要。
 
-### 5.3 echo 与 kratos-http 的位置
+### 5.3 echo 为什么没成为候选
 
-- **[echo](https://github.com/labstack/echo)** 在两个项目里都没有成为候选，只在考察开源实现时遇到过（[Hanko](https://github.com/teamhanko/hanko) 用 `labstack/echo/v4`）。Gin/Echo/Fiber 并列出现的唯一语境，是给 authx 下游业务服务的 SDK 规划的三种框架中间件适配器——SDK 不应该强制业务服务用哪种 Web 框架。
-- **kratos-http**（go-kratos 的 HTTP transport）不是独立框架，而是框架内的一等传输层：`protoc-gen-go-http` 从 `google.api.http` 注解生成路由注册代码，HTTP 与 gRPC 共享同一份 service 实现。用 kratos 时就不再存在「选哪个 HTTP 框架」的问题。
+[echo](https://github.com/labstack/echo) 在两个项目里都没有成为候选，只在考察开源实现时遇到过（[Hanko](https://github.com/teamhanko/hanko) 用 `labstack/echo/v4`）。echo 比 Gin 内置能力更多，但也更重；而 Gin 在国内更流行，且已有项目已经采用 Gin。在 proto-first 架构下，echo 没有额外优势。
 
-### 5.4 小结
+### 5.4 kratos protoc-gen-go-http：不是同一个维度
 
-proto-first 架构下，HTTP 框架的选型空间被压缩：它的角色变成注解生成的 handler 或网关 `ServeMux` 的运行载体。真正影响选择的是**中间件模型是否与生成物兼容**（chi 更合适的原因）和**与已有系统的一致性**（Gin 更合适的原因），而不是路由性能或特性清单。
+kratos 自带的 `protoc-gen-go-http` 属于另一个类别：它不是候选框架，而是 HTTP 代码生成器。它从 `google.api.http` 注解生成 HTTP handler，把 HTTP query/path/body 绑定到 proto 请求消息，调用 service 接口方法，再把 proto 响应写回 HTTP/JSON。这样 HTTP server 和 gRPC server 可以跑在同一个服务里，共享同一份 service 实现。
+
+它和 gRPC-Gateway、Connect-RPC 都在做「HTTP/JSON → gRPC」，但定位不同：
+
+- **gRPC-Gateway** 是独立网关，通常单独部署，适合管理面网关这类需要集中控制的场景；
+- **Connect-RPC** 是协议框架，路径约定式，同时支持 Connect/gRPC/gRPC-Web；
+- **kratos `protoc-gen-go-http`** 是进程内代码生成，按 `google.api.http` 注解把已有 gRPC 服务再暴露一层 HTTP，服务仍然是 gRPC 优先。
+
+所以 api-server 作为管理面网关选 gRPC-Gateway；独立服务需要多协议暴露时 Connect-RPC 更轻量；kratos 服务内部需要 HTTP 时，`protoc-gen-go-http` 就能满足需求。
+
+| | gRPC-Gateway | Connect-RPC | kratos `protoc-gen-go-http` |
+|---|---|---|---|
+| 定位 | 独立 HTTP/JSON → gRPC 网关 | 多协议 RPC 框架 | kratos 进程内 HTTP 代码生成 |
+| 部署 | 单独进程/服务 | 与业务服务同进程 | 与业务服务同进程 |
+| HTTP 路径 | `google.api.http` 注解 | 约定式 `/{pkg}.{Service}/{Method}` | `google.api.http` 注解 |
+| 协议支持 | HTTP/JSON ↔ gRPC | Connect/gRPC/gRPC-Web | HTTP/JSON ↔ gRPC |
+| 主要场景 | 管理面网关、公共 HTTP 契约 | 独立服务多协议暴露 | kratos 服务内部暴露 HTTP |
 
 ## 6. go-kratos 生态的默认技术栈与分层
 
