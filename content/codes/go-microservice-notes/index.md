@@ -2,7 +2,7 @@
 title: "Go 微服务选型杂谈"
 date: 2026-08-10T20:10:00+08:00
 isCJKLanguage: true
-draft: true
+draft: false
 tags: ["go", "microservices", "grpc", "connect-rpc", "grpc-gateway", "openapi", "protobuf", "kratos", "ent", "gorm", "tech-selection"]
 ---
 
@@ -220,7 +220,7 @@ string username = 1 [
 
 这次设计实际采用的是**全平台统一业务信封 + HTTP 状态码恒为 200**：
 
-- 所有 RPC 响应统一为 `{ retcode, retmsg, data }`；`retcode=0` 表示成功，非 0 为业务错误码，按 HTTP 风格分段：`400xx` 参数错误、`401xx` 认证失败、`403xx` 授权失败、`404xx` 不存在、`409xx` 冲突、`500xx`/`503xx` 内部错误/不可用；api-server 自身的转发/中间件层错误用 `900xx` 段位。
+- 所有 RPC 响应统一为 `{ retcode, retmsg, data }`；`retcode=0` 表示成功，非 0 为业务错误码，按 HTTP 风格分段：`400xx` 参数错误、`401xx` 认证失败、`403xx` 授权失败、`404xx` 不存在、`409xx` 冲突、`500xx`/`503xx` 内部错误/不可用；api-server 自身的转发/中间件层错误单独占用一个高位段位，与业务错误码区分开。
 - 信封定义在 proto message 层：每个 `XxxResponse` 含 `retcode`/`retmsg`/`data` 字段，原业务字段下沉为 `XxxResponseData`。这样 gRPC 与 HTTP/JSON 共享同一结构，gRPC status 只保留传输语义（调用是否到达、是否 panic），不再承载业务错误。
 
 示例：
@@ -266,7 +266,7 @@ message GetSessionResponseData {
 ### 3.3 这样设计的好处
 
 - **前端契约稳定**：调用方只看 `retcode`，不需要同时理解 HTTP 状态码和 connect/gRPC 错误体两套约定。
-- **多下游混用时不被牵制**：不会因为某个下游返回 500 就让前端把整条链路当服务器故障；部分下游失败时，网关可以用自己的 `900xx` 表达「下游异常响应」，而不是被 gRPC status 限制。
+- **多下游混用时不被牵制**：不会因为某个下游返回 500 就让前端把整条链路当服务器故障；部分下游失败时，网关可以用自己的错误码段位表达「下游异常响应」，而不是被 gRPC status 限制。
 - **错误码空间可扩展**：gRPC 的 17 个 code 对业务来说太粗，数字 code 的可读性也差；HTTP 风格段位兼顾了分类能力和可读性。
 
 ### 3.4 代价同样明显
@@ -319,7 +319,7 @@ authx 设计阶段还有一个需要确定的问题：session token 用什么形
 | [ZITADEL](https://github.com/zitadel/zitadel) | JWT 或 opaque | opaque | 提供 introspection / revocation 端点 |
 | [Ory Hydra](https://github.com/ory/hydra) | JWT 或 opaque | opaque | refresh token 必须保证即时吊销 |
 
-这些服务的共同点是：把**短 TTL 的 JWT 用于访问凭证**，把**opaque token 用于刷新凭证**。混合形态本身并非不可行，关键在于别把两边的缺点也一起拿过来。JWT 省掉回源，这套方案才有意义；一旦 access token 每次校验仍要回源查库，它的优势就被抵消，反而要多维护一套黑名单或 jti。
+这些服务的共同点是：把**短 TTL 的 JWT 用于访问凭证**，把**opaque token 用于刷新凭证**。混合形态本身并非不可行，关键在于别把两边的缺点也一起拿过来。JWT 省掉回源，这套方案才有意义；一旦 access token 每次校验仍要回源查库，它的优势就被抵消，反而要多维护一套黑名单或 token 唯一标识（jti）。
 
 ### 4.2 当前项目的现状
 
@@ -435,7 +435,7 @@ proto 的 enum 默认生成 int32（配合 `iota` 式的常量），ent 的 `fie
 
 最初选 GORM 的理由只有「与 new-api 同栈」，但考察开源项目时注意到一组事实：Ory Kratos 用自研的 `ory/pop`，[Dex](https://github.com/dexidp/dex) 用 ent，ZITADEL 用 pgx，Hanko 用 pop——**主流项目的 ORM 各不相同，说明这一层选型更多是团队一致性问题而非技术优劣问题**。
 
-另一个相关原则是数据库 schema 演进（迁移）最好与 ORM 解耦。这里的关键是控制粒度：用 [golang-migrate](https://github.com/golang-migrate/migrate) 管理版本化的 SQL 迁移文件（Ory Talos 也采用这个方案），可以对 DDL 做更细的控制和回滚；ent 自带的 `auto_migrate` 开关则让 ORM 自动推进 schema，更省事但可控性弱一些。两种方式都能走，关键是**只选一种权威来源**，避免混用。
+另一个相关原则是数据库 schema 演进（迁移）最好与 ORM 解耦。这里的关键是控制粒度：用 [golang-migrate](https://github.com/golang-migrate/migrate) 管理版本化的 SQL 迁移文件，可以对 DDL 做更细的控制和回滚；ent 自带的 `auto_migrate` 开关则让 ORM 自动推进 schema，更省事但可控性弱一些。两种方式都能走，关键是**只选一种权威来源**，避免混用。
 
 ## 7. go-kratos 生态的默认技术栈与分层
 
