@@ -548,16 +548,54 @@ go tool ent generate ./internal/data/ent/schema
 
 ## 8. Session Token 的形态：JWT vs 随机字符串
 
-authx 设计阶段还有一个讨论较多的问题：session token 该用什么形态。
+authx 设计阶段还有一个需要确定的问题：session token 用什么形态。AuthX 本身是有后端状态的（`sessions` 表 + Redis），凭证校验又被要求必须实时回源——每次校验都要确认 token 有效、未被吊销。JWT 最大的卖点是「自包含、免回源」，但在这个前提下发挥不出来：验证 access_token 时仍然要查后端状态。
 
-前提是一个经常被忽略的事实：AuthX 本来就有后端状态（`sessions` 表 + Redis），而且凭证校验被要求**必须实时回源**——`IntrospectionService/Introspect` 每次都要确认凭证有效、未被吊销。这样一来，JWT 赖以成名的「免回源」优势就发挥不出来了：验证 access_token 时仍然要查后端的用户、角色和吊销状态。
+基于这一点，两种方案自身的特性值得考量：
 
-两种纯粹的形态各有明确的适用面：
+- **随机字符串（opaque token）**：token 本身没有语义，只是一个标识符。校验必须回源，但回源本来就是必须的；好处是吊销即时生效，没有传播延迟，实现也最简单。Session Cookie、API Key（`sk-xxx`）都属于这一类。
+- **自包含 JWT**：把 `user_id`、`tenant_id`、`role_ids` 等声明直接写进 token。短 TTL（如 5-15 分钟）内可以减少回源次数；代价是吊销只能依赖黑名单或等待过期。「自包含」和「可即时吊销」天然矛盾。
 
-- **随机字符串（opaque token）**：本身不携带任何语义，校验必须回源；回源开销与现状一致，但吊销即时生效，没有传播延迟，校验逻辑也最简单。Session Cookie、API Key（`sk-xxx`）本质上都是这一类。
-- **自包含 JWT**：声明（`user_id`、`tenant_id`、`role_ids`）内含在 token 里，短 TTL（如 5-15 分钟）可以减少回源次数；代价是吊销只能靠黑名单或等待过期，「自包含」和「可吊销」天然矛盾。
+  一个 JWT 由 `header.payload.signature` 三部分组成，每部分都是 Base64URL 编码，用 `.` 连接。例如：
 
-合理的做法是按场景区分，**两种方案不宜拼在一起**：JWT + 回源黑名单的混合形态同时承担了两边的成本——既没有纯 JWT 的免回源，也没有 opaque token 的吊销简单，还要额外维护黑名单存储和 jti 管理。不过这个方向 leader 已经定了，目前采用的正是这种混合形态：JWT access token + refresh token，配 Redis 黑名单支持强制下线。
+  ```text
+  eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwidXNlcl9pZCI6InVzcl8xMjMiLCJ0ZW5hbnRfaWQiOiJ0bnRfYWJjIiwicm9sZV9pZHMiOlsiYWRtaW4iXSwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwODJ9.SflKxwRJSMeKKF2QT4fwpMe...
+  ```
+
+  解码后的 payload 大致是：
+
+  ```json
+  {
+    "sub": "1234567890",        // subject：token 归属的主体标识
+    "user_id": "usr_123",       // 业务侧用户 ID
+    "tenant_id": "tnt_abc",     // 业务侧租户 ID
+    "role_ids": ["admin"],      // 角色列表
+    "iat": 1516239022,          // issued at：签发时间戳
+    "exp": 1516239082           // expiration：过期时间戳
+  }
+  ```
+
+按场景二选一比较合理。如果后端本来就要回源，opaque token 更直接；如果希望减少回源、能接受延迟吊销，JWT 更合适。
+
+### 8.1 业内的常见做法
+
+主流身份认证服务很少走纯 JWT 或纯 opaque 的极端，普遍采用「JWT access token / ID token + opaque refresh token」的混合形态：access token 短 TTL，资源服务端可以本地验证；refresh token 不透明，由授权服务端统一管理和吊销。
+
+| 服务 | access token / ID token | refresh token | 核心策略 |
+|---|---|---|---|
+| [Auth0](https://auth0.com/) | JWT 或 opaque | opaque | 按 audience 决定 access token 格式 |
+| [Supabase Auth](https://supabase.com/) | JWT | opaque | access token 默认 1 小时 TTL |
+| [Firebase Auth](https://firebase.google.com/) | ID token 为 JWT | opaque | 通过 refresh token 换取新 ID token |
+| [AWS Cognito](https://aws.amazon.com/cognito/) | JWT | opaque | access token 默认 1 小时 TTL，支持撤销 |
+| [ZITADEL](https://github.com/zitadel/zitadel) | JWT 或 opaque | opaque | 提供 introspection / revocation 端点 |
+| [Ory Hydra](https://github.com/ory/hydra) | JWT 或 opaque | opaque | refresh token 必须保证即时吊销 |
+
+这些服务的共同点是：把**短 TTL 的 JWT 用于访问凭证**，把**opaque token 用于刷新凭证**。混合形态本身并非不可行，关键在于别把两边的缺点也一起拿过来——也就是常说的「取两家之短」。JWT 省掉回源，这套方案才有意义；一旦 access token 每次校验仍要回源查库，它的优势就被抵消，反而要多维护一套黑名单或 jti。
+
+### 8.2 当前项目的现状
+
+本项目最终采用的是 JWT access token + JWT refresh token，配合 Redis 黑名单支持强制下线。连 refresh token 也是 JWT，意味着它的吊销同样只能依赖黑名单或等待过期——这在行业里并不常见，多半是设计阶段只关注了统一技术形态，没有把 refresh token 的格式和行业惯例细致对齐；现在回头看，算是一处疏漏。
+
+既然每次校验都要回源确认，access token 的本地验证优势本就不存在。从设计角度看，这种情况下更倾向于使用 opaque token：实现更直接，吊销也简单。
 
 ## 9. 收尾
 
