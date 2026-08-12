@@ -13,7 +13,7 @@ tags: ["go", "microservices", "grpc", "connect-rpc", "grpc-gateway", "openapi", 
   - gRPC-Gateway OpenAPI 注解与 Protovalidate 注解的分工
 - 状态码风格对比：HTTP/gRPC status code vs 自定义信封
 - session token 形态对比：JWT vs 随机字符串（opaque token）
-- web 层框架对比：[gin](https://github.com/gin-gonic/gin) / [chi](https://github.com/go-chi/chi) / [echo](https://github.com/labstack/echo) / [kratos](https://github.com/go-kratos/kratos) `protoc-gen-go-http`
+- web 层框架对比：[gin](https://github.com/gin-gonic/gin) / [chi](https://github.com/go-chi/chi) / [echo](https://github.com/labstack/echo) / [kratos](https://github.com/go-kratos/kratos)
 - ORM 框架对比：ent vs GORM
 - go-kratos 生态的默认技术栈与推荐的 service 层次划分
 - 工具链版本管理：`go install` / `go run @version` / `tools.go` vs Go 1.24+ `go tool`
@@ -327,7 +327,7 @@ authx 设计阶段还有一个需要确定的问题：session token 用什么形
 
 既然每次校验都要回源确认，access token 的本地验证优势本就不存在。从设计角度看，这种情况下更倾向于使用 opaque token：实现更直接，吊销也简单。
 
-## 5. gin / chi / echo / kratos protoc-gen-go-http
+## 5. gin / chi / echo / kratos
 
 在 proto-first 架构下，HTTP 框架不再承载业务语义，只是生成 handler 或网关路由的运行载体。选型标准因此也和传统 Web 项目不同。
 
@@ -597,3 +597,9 @@ go tool ent generate ./internal/data/ent/schema
 | 可复现性 | 低 | 中 | 高 | 高 |
 
 这些方案的核心差异在于版本是否可控、工具身份是否独立声明。真正值得警惕的问题是**生成器版本不固定，既会导致不同环境生成不同代码，也可能和运行时库版本不匹配**。例如 `protoc-gen-go` 与 `google.golang.org/protobuf`、`protoc-gen-go-grpc` 与 `google.golang.org/grpc`、ent 的生成器与 `entgo.io/ent` 之间都有这种风险；`go install @latest` 或散落在 YAML 里的 `go run @version` 很难保证所有环境使用同一组版本。`tools.go` 能固定版本，但工具包和业务依赖混排后不够直观。`go tool` 把生成器和运行时库放在同一份 `go.mod` 下管理，不同开发者、CI、不同服务之间更容易得到一致性、可复现的构建。
+
+## 9. 结语
+
+做方案选型和设计时，主要是聚焦在这几个方面：把同领域主流方案尽量看全，尊重团队已有的技术栈，按真实需求务实落地，以及不断提升个人调研与思考的深度和素养。具体地说，Connect-RPC、gRPC-Gateway、gin/chi/echo/kratos、ent、GORM、各 OpenAPI 生成器都纳入比较，是为了避免只在熟悉选项里打转；不抛开已经跑起来的 new-api/FastAPI 系统去追求所谓更先进的技术，是因为那并不务实；api-server 的网关角色、authx 的认证鉴权角色、前端契约必须是 OpenAPI v3，这些约束直接决定结论；而从倾向 Connect-RPC 转向 gRPC-Gateway、从 GORM 切换到 ent 的过程，也想尽量坦诚地记录下来。
+
+另一层感受是，这份结论只走到了设计方案层面，错过了在实现阶段继续深化的机会。纸面论证和实际落地之间，往往隔着只有实践才能发现的偏差。如果工作节奏注定要把大量时间花在方案设计上，那至少要把这一阶段的调研做扎实——对比维度、边界条件、落地风险都想清楚。方案设计本身也可以是一种可交付的、有价值的工作，关键是不能让它沦为浅尝辄止的草稿。
