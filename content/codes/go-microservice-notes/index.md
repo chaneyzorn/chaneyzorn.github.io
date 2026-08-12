@@ -386,11 +386,36 @@ kratos 自带的 `protoc-gen-go-http` 属于另一个类别：它不是候选框
 
 ## 6. go-kratos 生态的默认技术栈与分层
 
-authx 的实施阶段由 leader 指定了 [go-kratos](https://github.com/go-kratos/kratos) 生态。实际代码基于 go-kratos v3 的 kratos-layout 模板做了些改造，从中可以看出这个生态的默认主张。
+authx 进入实施阶段后，leader 指定了 [go-kratos](https://github.com/go-kratos/kratos) 生态。实际代码基于 go-kratos v3 的 kratos-layout 模板，做了少量裁剪。
 
-很多读者熟悉的 go-kratos 是 v2 系列，[v3.0.0 发布于 2026 年 6 月](https://github.com/go-kratos/kratos/releases/tag/v3.0.0)，最大的变化是模块路径整体迁入 `/v3`（破坏性变更），要求 Go 1.25+；跟进的改进包括 errors 包增加标准库 `errors` 的包装、logging 中间件转向标准库 `slog`、config 增加泛型 `Get`、validate 支持自定义 validator 等。实际使用下来，模板结构与 v2 差别不大。
+[go-kratos v3.0.0 发布于 2026 年 6 月](https://github.com/go-kratos/kratos/releases/tag/v3.0.0)，最大的变化是模块路径整体迁入 `/v3`（破坏性变更），要求 Go 1.25+；跟进的改进包括 errors 包增加标准库 `errors` 的包装、logging 中间件转向标准库 `slog`、config 增加泛型 `Get`、validate 支持自定义 validator 等。实际使用下来，模板结构与 v2 差别不大。
 
 ### 6.1 推荐的层次划分
+
+kratos-layout 把代码拆成四层：`server`、`service`、`biz`（business）、`data`。在解释每层职责之前，先说明这三组贯穿各层的模型：DTO、DO、PO。
+
+#### DTO / DO / PO 三模型
+
+| 模型 | 全称 | 中文说明 | 所在层 | 作用 |
+|---|---|---|---|---|
+| DTO | Data Transfer Object | 数据传输对象 | service | 承载传输层的序列化和反序列化；proto 生成的消息即对外接口契约 |
+| DO | Domain Object | 领域对象 | biz | 表达业务层的业务逻辑；承载业务规则、权限判断、流程编排等语义 |
+| PO | Persistence Object | 持久化对象 | data | 承载数据库数据的序列化和反序列化；对应数据库表结构 |
+
+一次请求的数据形态变化大致是：客户端传来 DTO → service 转成 DO → biz 处理 DO → data 把 DO 转成 PO 存进数据库；返回时反向再转回来。
+
+四层的关系可以用下面这张图概括：
+
+```mermaid
+flowchart TD
+    Client[客户端] -->|gRPC/HTTP 请求| Server[server<br/>启动 gRPC/HTTP server<br/>注册 service]
+    Server --> Service[service<br/>DTO ↔ DO 转换<br/>（传输层到业务层）<br/>填充统一响应信封]
+    Service --> Biz[biz<br/>领域逻辑<br/>声明 Repo 接口]
+    Biz --> Data[data<br/>实现 Repo 接口<br/>DO ↔ PO 转换<br/>（业务层到持久化层）]
+    Data --> DB[(数据库)]
+```
+
+目录结构对应如下：
 
 ```text
 services/auth/
@@ -405,27 +430,42 @@ services/auth/
     └── pkg/             # 共享工具
 ```
 
-分层契约的核心是 **DTO/DO/PO 三模型 + 单向依赖**：
+#### 四层的职责
 
-- `service` 只做 DTO（proto 消息）↔ DO 转换，**不允许 import data**；
-- `biz` 是纯领域逻辑（业务层），Repo 接口在这里声明；
-- `data` 实现 Repo 接口（持久层），负责 DO↔PO 转换——构造函数返回接口类型（`func NewUserRepo(data *Data) biz.UserRepo`），由 wire 完成注入；
-- 生成物（`*.pb.go`、`wire_gen.go`、ent 产物）不做手工修改，统一用 `make api` / `make generate` 重新生成。
+- `server`：程序的入口层。负责创建 kratos 的 gRPC server 和 HTTP server，把 `service` 注册进去，并挂载中间件（如 recovery、validate）。这一层只关心传输和装配，不写业务。
+- `service`：接口适配层。它实现 proto 生成的 `Service` 接口，把来自 gRPC/HTTP 的 `DTO` 转成 `DO`，调用 `biz` 的方法；拿到结果后再转回 `DTO`，填充统一响应信封。
+- `biz`（business）：业务/领域逻辑层。这里放纯领域对象 `DO`、以及 Repo 接口声明。业务规则、权限判断、流程编排都在这层，它只知道 `DO`，不知道 proto 消息，也不知道数据库表结构。
+- `data`：持久层。它实现 `biz` 里声明的 Repo 接口，负责 `DO` 和 `PO` 的转换，持有 `*ent.Client` 或数据库连接。
+
+#### 单向依赖与依赖注入
+
+依赖方向只允许从外层指向内层：`service` 可以 import `biz`，`biz` 里声明 Repo 接口；`data` 实现 Repo 接口，但 `service` 不直接 import `data`，否则会跳过业务层、破坏单向依赖。具体对象的创建和注入由 [google/wire](https://github.com/google/wire) 在 `cmd/auth` 里统一完成：server、service、biz、data 各层暴露 `ProviderSet`，wire 按依赖关系生成装配代码，`cmd` 是整个项目唯一的依赖注入装配点。
+
+另外，所有生成物（`*.pb.go`、`wire_gen.go`、ent 产物）都不手工修改，通过代码生成重新产出。
 
 ### 6.2 默认技术栈的形态
 
-| 能力 | 机制 |
-|---|---|
-| 生命周期 | `kratos.New(kratos.Server(gs, hs))`，gRPC/HTTP server 统一管理启停 |
-| 配置 | proto 定义配置结构（`AppConfig`），buf 生成代码，kratos config 从文件加载并扫描进结构体 |
-| 依赖注入 | [google/wire](https://github.com/google/wire)，各层暴露 `ProviderSet`，cmd 是唯一装配点 |
-| 错误 | kratos `errors` 的类型化错误（NotFound 等），配合自定义信封 retcode/retmsg |
-| 中间件 | recovery、validate（实际用的是 [`go.einride.tech/aip`](https://github.com/einride/aip-go) 的 field behavior 校验）等，按 server 维度挂载 |
-| proto 工具链 | [buf](https://github.com/bufbuild/buf) v2（lint STANDARD + breaking）+ `protoc-gen-go` / `-go-grpc` / `-go-http` / `protoc-gen-openapi` |
-| 工具管理 | Go 1.24+ 的 `tool` 指令统一由 go.mod 管理，`go tool buf` / `go tool wire` / `go tool ent`，不再 `go install` |
-| API 风格 | 遵循 Google AIP：resource-oriented、`page_size`/`page_token` 分页、field behavior、Protovalidate 校验规则写在 proto 里 |
+| 能力 | 机制 | 说明 |
+|---|---|---|
+| 生命周期 | `kratos.New(kratos.Server(gs, hs))` | kratos 统一管理 gRPC/HTTP server 的启动与优雅关闭 |
+| 配置 | `conf.proto` → `AppConfig` | 用 proto 定义配置结构，[buf](https://github.com/bufbuild/buf) 生成 Go 代码，kratos config 从 yaml 加载并扫描进结构体 |
+| 依赖注入 | [google/wire](https://github.com/google/wire) | server、service、biz、data 各层暴露 `ProviderSet`，`cmd/auth` 是唯一装配点 |
+| 错误 | kratos `errors` 包 | 提供 `NotFound`、`BadRequest` 等类型化错误，再映射到自定义信封的 `retcode`/`retmsg` |
+| 中间件 | recovery、validate 等 | 按 server 维度挂载，validate 实际用的是 [`go.einride.tech/aip`](https://github.com/einride/aip-go) 的 field behavior 校验 |
+| proto 工具链 | [buf](https://github.com/bufbuild/buf) v2 | lint 规则用 STANDARD，breaking 检测开启；配合 `protoc-gen-go`（生成消息）、`-go-grpc`（生成 gRPC 服务端/客户端）、`-go-http`（生成 HTTP handler）、`protoc-gen-openapi`（生成 OpenAPI） |
+| 工具管理 | Go 1.24+ `tool` 指令 | `go tool buf`、`go tool wire`、`go tool ent` 直接调用，不再全局 `go install` |
+| API 风格 | Google AIP | resource-oriented 资源命名、`page_size`/`page_token` 分页、field behavior 标注字段语义、Protovalidate 校验规则写在 proto 里 |
 
-相对标准模板，实际落地时做了几处裁剪：业务接口只走 gRPC 暴露，HTTP server 仅保留健康检查；响应统一用信封而非 kratos 默认错误透传。
+#### 几个术语补充
+
+- **buf**：proto 的构建工具，负责 lint、format、生成代码和 breaking change 检测，替代了传统 `protoc` + 一堆插件的手动管理。
+- **wire**：Google 的编译期依赖注入工具，通过 `wire_gen.go` 生成装配代码，避免运行时的反射容器。
+- **ProviderSet**：wire 的概念，把一组构造函数打包成一个集合，方便上层统一引用。
+- **AIP（Google API Improvement Proposals）**：Google 的 API 设计规范，kratos 推荐按这套规范来组织资源、错误、分页和字段语义。
+- **field behavior**：AIP 里的概念，例如 `REQUIRED`、`OUTPUT_ONLY`、`IMMUTABLE`，用来标注字段在请求/响应中的角色，配合 validate 中间件做校验。
+- **Protovalidate**：buf 推出的 proto 校验规则框架，校验逻辑写在 proto 里，运行时由 Go 库执行。
+
+实际落地时，相对于模板默认形态做了几处裁剪：业务接口只走 gRPC 暴露，HTTP server 仅保留健康检查；响应统一用信封而非 kratos 默认错误透传。
 
 ## 7. Session Token 的形态：JWT vs 随机字符串
 
