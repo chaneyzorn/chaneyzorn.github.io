@@ -15,6 +15,7 @@ tags: ["go", "microservices", "grpc", "connect-rpc", "grpc-gateway", "openapi", 
 - 状态码风格对比：HTTP/gRPC status code vs 自定义信封
 - web 层框架对比：[gin](https://github.com/gin-gonic/gin) / [chi](https://github.com/go-chi/chi) / [echo](https://github.com/labstack/echo) / [kratos](https://github.com/go-kratos/kratos) `protoc-gen-go-http`
 - go-kratos 生态的默认技术栈与推荐的 service 层次划分
+- 工具链版本管理：`go install` / `go run @version` / `tools.go` vs Go 1.24+ `go tool`
 
 authx 的方案做得更早，后来引入 api-server 作为管理面的统一 HTTP 入口，由它代理所有管理面请求，与 authx 等下游服务之间主要走 gRPC。authx 的几个决策也因此被重新评估的。下文有些对比来自实际编码体验（ent、kratos 分层），有些停留在调研结论（OpenAPI 生成器、Connect-RPC 的大部分论据）。
 
@@ -467,7 +468,85 @@ services/auth/
 
 实际落地时，相对于模板默认形态做了几处裁剪：业务接口只走 gRPC 暴露，HTTP server 仅保留健康检查；响应统一用信封而非 kratos 默认错误透传。
 
-## 7. Session Token 的形态：JWT vs 随机字符串
+## 7. 工具链管理：Go 1.24+ `tool` 指令
+
+Go 1.24 引入了 `tool` 指令，允许把构建工具直接声明在 `go.mod` 里。这个机制对 proto、wire、ent、lint 这类代码生成和检查工具特别合适。但在它之前，Go 项目已经有过几种工具版本化管理方案，至今仍广泛存在于各种代码库里。
+
+### 7.1 几种工具版本化方案
+
+**`go install ...@latest`**
+把工具安装到全局 `GOPATH/bin`，然后像普通命令一样调用。`@latest` 不固定版本，不同环境安装到的版本可能不同。一些较早创建的服务 Makefile 里仍能看到这种写法：
+
+```makefile
+init:
+    go install github.com/google/wire/cmd/wire@latest
+    go install github.com/bufbuild/buf/cmd/buf@latest
+```
+
+**`go run ...@version`**
+不在 `go.mod` 里记录工具，每次调用时直接指定版本。一些服务的 `buf.gen.yaml` 里常见：
+
+```yaml
+plugins:
+  - local: ["go", "run", "google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11"]
+    out: api
+```
+
+版本固定了，但调用路径长，版本号散落在各服务的 YAML 文件里。
+
+**`tools.go` 空 import（`_ "..."`）**
+Go 1.24 之前最常见的方案。在项目中放一个带 `//go:build tools` 标签的 `tools.go`，用下划线 `_` 把工具包 import 进来，但不引用它的任何导出符号：
+
+```go
+//go:build tools
+
+package tools
+
+import (
+    _ "github.com/bufbuild/buf/cmd/buf"
+    _ "github.com/google/wire/cmd/wire"
+)
+```
+
+工具依赖进入 `go.mod` 的 `require` 块，普通构建不会把它们编进二进制。缺点是和业务依赖混排，`go.mod` 看起来嘈杂。
+
+**`go tool`（Go 1.24+）**
+把工具声明在 `go.mod` 独立的 `tool` 块里：
+
+```go
+tool (
+    entgo.io/ent/cmd/ent
+    github.com/bufbuild/buf/cmd/buf
+    github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+    github.com/google/wire/cmd/wire
+    google.golang.org/protobuf/cmd/protoc-gen-go
+)
+```
+
+`tool` 块只声明工具身份，不带版本号；版本仍由 `go.mod` 的 `require` 块决定，通常以 `// indirect` 形式出现。调用简化为 `go tool <name>`：
+
+```bash
+go tool buf --version
+go tool wire ./cmd/auth
+go tool ent generate ./internal/data/ent/schema
+```
+
+改造后的 Makefile 直接调用 `go tool buf` 等命令，`buf.gen.yaml` 里也使用 `local: ["go", "tool", "protoc-gen-go"]`。工具身份和业务依赖被明确分开。
+
+### 7.2 四种方案对比
+
+| 维度 | `go install @latest` | `go run @version` | `tools.go` 空 import | `go tool` |
+|---|---|---|---|---|
+| 版本来源 | 无，取最新 | 命令/YAML 中硬编码 | `go.mod` require | `go.mod` require |
+| 工具身份声明 | 无 | 无 | 通过 `tools.go` 文件 | `go.mod` tool 块 |
+| 与业务依赖混排 | 否 | 否 | 是 | 否 |
+| 避免编译进二进制 | 是（全局安装） | 是（临时运行） | 需 `//go:build tools` | 自动排除 |
+| 调用方式 | 全局命令 | `go run pkg@version` | `go run pkg` | `go tool name` |
+| 可复现性 | 低 | 中 | 高 | 高 |
+
+这些方案的核心差异在于版本是否可控、工具身份是否独立声明。真正值得警惕的问题是**生成器版本不固定，既会导致不同环境生成不同代码，也可能和运行时库版本不匹配**。例如 `protoc-gen-go` 与 `google.golang.org/protobuf`、`protoc-gen-go-grpc` 与 `google.golang.org/grpc`、ent 的生成器与 `entgo.io/ent` 之间都有这种风险；`go install @latest` 或散落在 YAML 里的 `go run @version` 很难保证所有环境使用同一组版本。`tools.go` 能固定版本，但工具包和业务依赖混排后不够直观。`go tool` 把生成器和运行时库放在同一份 `go.mod` 下管理，不同开发者、CI、不同服务之间更容易得到一致性、可复现的构建。
+
+## 8. Session Token 的形态：JWT vs 随机字符串
 
 authx 设计阶段还有一个讨论较多的问题：session token 该用什么形态。
 
@@ -480,7 +559,7 @@ authx 设计阶段还有一个讨论较多的问题：session token 该用什么
 
 合理的做法是按场景区分，**两种方案不宜拼在一起**：JWT + 回源黑名单的混合形态同时承担了两边的成本——既没有纯 JWT 的免回源，也没有 opaque token 的吊销简单，还要额外维护黑名单存储和 jti 管理。不过这个方向 leader 已经定了，目前采用的正是这种混合形态：JWT access token + refresh token，配 Redis 黑名单支持强制下线。
 
-## 8. 收尾
+## 9. 收尾
 
 把两个项目的结论放在一起对照：
 
