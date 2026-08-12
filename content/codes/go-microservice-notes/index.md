@@ -18,7 +18,7 @@ tags: ["go", "microservices", "grpc", "connect-rpc", "grpc-gateway", "openapi", 
 - go-kratos 生态的默认技术栈与推荐的 service 层次划分
 - 工具链版本管理：`go install` / `go run @version` / `tools.go` vs Go 1.24+ `go tool`
 
-authx 的方案做得更早，后来引入 api-server 作为管理面的统一 HTTP 入口，由它代理所有管理面请求，与 authx 等下游服务之间主要走 gRPC。authx 的几个决策也因此被重新评估的。下文有些对比来自实际编码体验（ent、kratos 分层），有些停留在调研结论（OpenAPI 生成器、Connect-RPC 的大部分论据）。
+authx 的方案做得更早，后来引入 api-server 作为管理面的统一 HTTP 入口，由它代理所有管理面请求，与 authx 等下游服务之间主要走 gRPC。authx 的几个决策也据此重新评估。下文有些对比来自实际编码体验（ent、kratos 分层），有些停留在调研结论（OpenAPI 生成器、Connect-RPC 的大部分论据）。
 
 团队此前已有两套系统在运行：一套基于开源 [new-api](https://github.com/QuantumNous/new-api) 项目，负责推理请求的路由与计费，是 Go + Gin + GORM 技术栈；另一套是自研的推理服务部署项目，负责拉起推理服务、承接请求，用的是 Python + FastAPI。在做方案时我也仔细考量了这些已有项目所使用的技术栈。
 
@@ -71,10 +71,10 @@ api-server 是平台管理面 HTTP/JSON 到内部 gRPC 的统一入口，核心�
 authx 是独立的认证鉴权服务，处境和网关不同：
 
 - 服务自身是 proto-first 的，希望 HTTP/JSON 与 gRPC 双传输一站解决，不想再维护一套网关；
-- 考察同为认证鉴权系统的开源实现时，[ZITADEL](https://github.com/zitadel/zitadel) 的技术栈与目标完全一致（Go + Connect-RPC + buf）；
+- 考察同为认证鉴权系统的开源实现时，[ZITADEL](https://github.com/zitadel/zitadel) 的技术栈与目标非常接近（Go + Connect-RPC + buf）；
 - authx 需要自己暴露少量 HTTP-only 端点：OAuth/OIDC 的 authorize/callback 302 跳转、登录态的 `Set-Cookie`、JWKS 与 well-known 发现端点，这些端点用 Web 框架承载、与 RPC handler 共用同一监听端口即可。
 
-基于此，当时选了 connect-go v1.20：生成的 handler 就是标准的 `net/http` handler，经 `gin.WrapH` 挂进 Web 框架，与这些 HTTP-only 端点共用端口，实现起来很自然。
+基于此，当时选了 connect-go v1.20：生成的 handler 就是标准的 `net/http` handler，经 `gin.WrapH` 挂进 Web 框架，与这些 HTTP-only 端点共用端口，实现起来比较直接。
 
 ### 1.4 方案演进与小结
 
@@ -86,7 +86,7 @@ connect-go 的 HTTP 能力因此不再被直接使用，继续用它反而多维
 
 ## 2. OpenAPI 的 proto 生成器对比
 
-OpenAPI 这块的选型要从 HTTP 映射的管理方式说起。api-server 最初的设想是完全建立在 gRPC-Gateway 的外置 YAML（`grpc_api_configuration`）上，把所有 HTTP 路径映射集中在一处管理，而不是用 `google.api.http` 注解侵入式地分散在各个 proto 里——gRPC-Gateway + `protoc-gen-openapiv2` 这一套都能与外置 YAML 配合，看起来很顺。
+OpenAPI 这块的选型要从 HTTP 映射的管理方式说起。api-server 最初的设想是完全建立在 gRPC-Gateway 的外置 YAML（`grpc_api_configuration`）上，把所有 HTTP 路径映射集中在一处管理，而不是用 `google.api.http` 注解侵入式地分散在各个 proto 里——gRPC-Gateway + `protoc-gen-openapiv2` 这一套都能与外置 YAML 配合，看起来比较自然。
 
 两种方式表达的是同一份映射。外置 YAML 把它们集中在网关侧的一个文件里，按 RPC 全名（`selector`）逐个指定：
 
@@ -102,7 +102,7 @@ http:
 
 内嵌注解则把同样的内容分散写进各个 proto 的 RPC 定义上（写法见 1.1 的例子）。前者的吸引力在于 HTTP 层完全由网关侧控制，不需要下游 proto 配合改动。
 
-深入考察后发现两个问题。一是 proto 生态里的众多生成器——包括 kratos 的 `protoc-gen-go-http` 和各 OpenAPI 生成器——都只认 proto 内嵌的 `google.api.http` 注解，外置 YAML 的支持面比想象中窄，连 gRPC-Gateway 自家的 `protoc-gen-openapiv3` 目前也尚未支持外置 YAML。二是前端契约需要 OpenAPI v3，而 openapiv2 只出 Swagger 2.0，既然生成器要换，也就没必要锁定在 grpc-gateway 自家的这一套上。
+深入考察后发现两个问题。一是 proto 生态里的众多生成器——包括 kratos 的 `protoc-gen-go-http` 和各 OpenAPI 生成器——都只认 proto 内嵌的 `google.api.http` 注解，外置 YAML 的支持面比想象中窄，连 gRPC-Gateway 自家的 `protoc-gen-openapiv3` 目前也尚未支持外置 YAML。二是前端契约需要 OpenAPI v3，而 openapiv2 只出 Swagger 2.0，既然生成器要换，也就没必要锁定在 gRPC-Gateway 自家的这一套上。
 
 于是 HTTP 映射改为写进 proto 注解——同一份 proto 可以同时作为 gRPC-Gateway、kratos 和 OpenAPI 生成器的输入；OpenAPI v3（3.0.x）生成器也随之重新选型，不再使用「`protoc-gen-openapiv2` 生成 Swagger 2.0、再用 [kin-openapi](https://github.com/getkin/kin-openapi) 转成 v3」的老流程。一共考察了四个候选，分别来自 `grpc-gateway`、`google/gnostic` 和 `protoc-gen-connect-openapi` 三个项目：
 
@@ -113,7 +113,7 @@ http:
 | google/gnostic [`protoc-gen-openapi`](https://github.com/google/gnostic) v0.7.1 | OpenAPI 3.0.x | 较成熟 | 不识别 protovalidate 注解，约束字段要后处理补 | `strategy: all` 生成单文件 |
 | [`protoc-gen-connect-openapi`](https://github.com/sudorandom/protoc-gen-connect-openapi) v0.25.7 | 默认 3.1.0，需降版本或接受 3.1 | 活跃但较新 | 识别并支持一部分 protovalidate 注解，`required`/`min/max`/`pattern`/`enum` 等直接进 schema | 默认生成 Connect 协议内容，需从 `features` 中去掉 `connectrpc`；`trim-unused-types` 按方法引用裁剪，未被引用的 message 仍可能进入文档 |
 
-grpc-gateway 的两个生成器位置很典型：openapiv2 成熟但只出 Swagger 2.0，openapiv3 能出 v3 但还不成熟——「能出 v3」和「敢用在生产」之间隔着一段距离，这也是进一步考察 gnostic 和 connect-openapi 的原因。
+gRPC-Gateway 的两个生成器位置很典型：openapiv2 成熟但只出 Swagger 2.0，openapiv3 能出 v3 但还不成熟——「能出 v3」和「敢用在生产」之间隔着一段距离，这也是进一步考察 gnostic 和 connect-openapi 的原因。
 
 connect-openapi 用 `features` 选项控制启用哪几套注解体系，一共有五个可选项：
 
@@ -125,9 +125,9 @@ connect-openapi 用 `features` 选项控制启用哪几套注解体系，一共�
 
 默认启用除 `twirp` 外的四个，而一旦显式设置就只启用列出的项——所以要让输出不含 Connect 协议内容，实际写法是 `features=google.api.http;gnostic;protovalidate`。
 
-connect-openapi 的 `trim-unused-types` 裁剪也不太干净：它按方法请求/响应引用来决定 schema 是否保留，但即使显式从 `features` 中去掉 `connectrpc`、只生成 `google.api.http` 注解的 HTTP 路径，那些未使用 `google.api.http` 注解的 RPC 所引用的 schema 也不会被裁掉。如果不考虑这一点，connect-openapi 是四个候选里最被推崇的一个：唯一内置 protovalidate 映射，同时认 gRPC-Gateway 和 gnostic 两套注解，覆盖面最全。
+connect-openapi 的 `trim-unused-types` 裁剪也不够彻底：它按方法请求/响应引用来决定 schema 是否保留，但即使显式从 `features` 中去掉 `connectrpc`、只生成 `google.api.http` 注解的 HTTP 路径，那些未使用 `google.api.http` 注解的 RPC 所引用的 schema 也不会被裁掉。如果不考虑这一点，connect-openapi 是四个候选里最值得考虑的一个：唯一内置 Protovalidate 映射，同时认 gRPC-Gateway 和 gnostic 两套注解，覆盖面最全。
 
-这个选型最终没有定下来，目前生成流程中使用的是 gnostic 的 `protoc-gen-openapi`，protovalidate 约束字段由后处理补。
+这个选型最终没有定下来，目前生成流程中使用的是 gnostic 的 `protoc-gen-openapi`，Protovalidate 约束字段由后处理补。
 
 ### 2.1 文档注解与校验注解的分工
 
@@ -150,13 +150,13 @@ string username = 1 [
 ];
 ```
 
-| | grpc-gateway OpenAPI 注解 | Protovalidate 注解 |
+| | gRPC-Gateway OpenAPI 注解 | Protovalidate 注解 |
 |---|---|---|
 | 写法 | 直接写 JSON Schema 关键字（`min_length`、`pattern`），面向文档描述 | 按字段类型组织规则（`string.min_len`、`enum.defined_only`），面向校验语义 |
 | 生效范围 | 只进 OpenAPI 文档，给前端看 | 后端运行时校验（gateway 拦截器、服务内执行） |
 | 另一侧是否可见 | 后端完全读不到 | 文档默认读不到，除非生成器内置映射或后处理补充 |
 
-工程规则上，同一条校验信息没必要在 proto 里写两遍：后端用 **[Protovalidate](https://github.com/bufbuild/protovalidate)** 做运行时校验，OpenAPI 文档里的 `min`/`max`/`pattern`/`required` 等约束字段也从这些规则映射或后处理生成，而不是在文档侧再手写一份。具体怎么映射，取决于生成器选型——connect-openapi 能直接生成，gnostic 和 grpc-gateway 则需要后处理阶段补充。
+工程规则上，同一条校验信息没必要在 proto 里写两遍：后端用 **[Protovalidate](https://github.com/bufbuild/protovalidate)** 做运行时校验，OpenAPI 文档里的 `min`/`max`/`pattern`/`required` 等约束字段也从这些规则映射或后处理生成，而不是在文档侧再手写一份。具体怎么映射，取决于生成器选型——connect-openapi 能直接生成，gnostic 和 gRPC-Gateway 则需要后处理阶段补充。
 
 ## 3. HTTP/gRPC 的错误与响应信封
 
@@ -166,7 +166,7 @@ string username = 1 [
 
 **gRPC**：用一组固定的 status code（`OK`、`INVALID_ARGUMENT`、`NOT_FOUND`、`UNAUTHENTICATED` 等约 17 个）表达调用结果，错误详情走 `google.rpc.Status`（AIP-193）：`code` + `message` + `details`，`details` 是可扩展的结构化错误明细。gRPC-Gateway 默认把 status code 映射到对应的 HTTP 状态码（如 `NOT_FOUND` → 404）。
 
-**Connect-RPC**：沿用与 gRPC 相同的 code 集合，但原生面向 HTTP/JSON，错误响应直接是 JSON。`code` 用字符串（如 `"not_found"`）而非数字；`details` 里的自定义错误用 base64 编码，避免客户端必须持有对应 proto 才能解析。与 gRPC-Gateway 相比，gRPC-Gateway 的 `code` 仍是数字（如 5）。二者共同点在于**传输层状态码负责错误分类，业务错误要归并到有限的 code 集合里**。
+**Connect-RPC**：沿用与 gRPC 相同的 code 集合，但原生面向 HTTP/JSON，错误响应直接是 JSON。`code` 用字符串（如 `"not_found"`）而非数字；`details` 里的自定义错误用 base64 编码，避免客户端必须持有对应 proto 才能解析。gRPC-Gateway 的 `code` 仍是数字（如 5）。二者共同点在于**传输层状态码负责错误分类，业务错误要归并到有限的 code 集合里**。
 
 **REST/OpenAPI** 的主流则是「HTTP 状态码即业务结果」：2xx 成功、4xx 客户端错误、5xx 服务端错误，业务错误类别多时再在 body 里套一层 `code`/`message`。好处是基础设施（LB、WAF、CDN、APM）都能识别，前端 `response.ok` 直接可用。
 
@@ -272,9 +272,9 @@ message GetSessionResponseData {
 ### 3.4 代价同样明显
 
 - **HTTP 状态码失去区分能力**：负载均衡、缓存、WAF、APM 无法通过状态码区分成功与失败；如果未来对外开放或接入第三方 SDK，「200 包错误」会让标准客户端困惑。
-- **可观测性需要额外建设**：access log 只记 `http_status=200` 的话，SRE 会以为一切正常。必须把 `retcode`（和 RPC 方法标识）作为 access log、trace、metrics 的一级字段，对 `retcode != 0` 的 span 标记 error，告警按「方法 + retcode」配置而不是只看 5xx。
+- **可观测性需要额外建设**：access log 只记 `http_status=200` 的话，SRE 会以为一切正常。需要把 `retcode`（和 RPC 方法标识）作为 access log、trace、metrics 的一级字段，对 `retcode != 0` 的 span 标记 error，告警按「方法 + retcode」配置而不是只看 5xx。
 
-几个前提同时成立时，这个方案才干净：所有下游统一了信封格式、网关保持轻量（不深入业务语义）、前端是内部团队，可以接受「看 retcode 不看 status」的约定。前提一旦变化（比如开放给外部开发者），矛盾会首先集中在 HTTP 语义缺失这一侧。
+几个前提同时成立时，这个方案才成立：所有下游统一了信封格式、网关保持轻量（不深入业务语义）、前端是内部团队，可以接受「看 retcode 不看 status」的约定。前提一旦变化（比如开放给外部开发者），矛盾会首先集中在 HTTP 语义缺失这一侧。
 
 ## 4. Session Token 的形态：JWT vs 随机字符串
 
@@ -319,7 +319,7 @@ authx 设计阶段还有一个需要确定的问题：session token 用什么形
 | [ZITADEL](https://github.com/zitadel/zitadel) | JWT 或 opaque | opaque | 提供 introspection / revocation 端点 |
 | [Ory Hydra](https://github.com/ory/hydra) | JWT 或 opaque | opaque | refresh token 必须保证即时吊销 |
 
-这些服务的共同点是：把**短 TTL 的 JWT 用于访问凭证**，把**opaque token 用于刷新凭证**。混合形态本身并非不可行，关键在于别把两边的缺点也一起拿过来——也就是常说的「取两家之短」。JWT 省掉回源，这套方案才有意义；一旦 access token 每次校验仍要回源查库，它的优势就被抵消，反而要多维护一套黑名单或 jti。
+这些服务的共同点是：把**短 TTL 的 JWT 用于访问凭证**，把**opaque token 用于刷新凭证**。混合形态本身并非不可行，关键在于别把两边的缺点也一起拿过来。JWT 省掉回源，这套方案才有意义；一旦 access token 每次校验仍要回源查库，它的优势就被抵消，反而要多维护一套黑名单或 jti。
 
 ### 4.2 当前项目的现状
 
@@ -347,7 +347,7 @@ authx 对 Web 框架的需求比网关更窄。原设计里选了 [Gin](https://
 
 ### 5.3 echo 为什么没成为候选
 
-[echo](https://github.com/labstack/echo) 在两个项目里都没有成为候选，只在考察开源实现时遇到过（[Hanko](https://github.com/teamhanko/hanko) 用 `labstack/echo/v4`）。echo 比 Gin 内置能力更多，但也更重；而 Gin 在国内更流行，且已有项目已经采用 Gin。在 proto-first 架构下，echo 没有额外优势。
+[echo](https://github.com/labstack/echo) 在两个项目里都没有成为候选，只在考察开源实现时遇到过（[Hanko](https://github.com/teamhanko/hanko) 用 `labstack/echo/v4`）。echo 比 Gin 内置能力更多，但也更厚重；而 Gin 在国内更流行，且已有项目已经采用 Gin。在 proto-first 架构下，echo 没有额外优势。
 
 ### 5.4 kratos protoc-gen-go-http：不是同一个维度
 
@@ -371,7 +371,7 @@ kratos 自带的 `protoc-gen-go-http` 属于另一个类别：它不是候选框
 
 ## 6. ent vs GORM
 
-最初选择的 ORM 框架其实并不是 [ent](https://entgo.io)。方案设计阶段选择了 [GORM](https://github.com/go-gorm/gorm) v2，理由是向 [new-api](https://github.com/QuantumNous/new-api) 的技术栈看齐；进入实施阶段后，leader 指定使用 go-kratos 生态，数据层随之换成了生态内常见的 ent。这次切换也是一次对 go-kratos 生态设计的实际体验。
+最初选择的 ORM 框架并不是 [ent](https://entgo.io)。方案设计阶段选择了 [GORM](https://github.com/go-gorm/gorm) v2，理由是向 [new-api](https://github.com/QuantumNous/new-api) 的技术栈看齐；进入实施阶段后，leader 指定使用 go-kratos 生态，数据层随之换成了生态内常见的 ent。这次切换也是一次对 go-kratos 生态设计的实际体验。
 
 ### 6.1 模型层面的差异
 
@@ -433,7 +433,7 @@ proto 的 enum 默认生成 int32（配合 `iota` 式的常量），ent 的 `fie
 
 ### 6.3 另一个观察
 
-最初选 GORM 的理由只有「与 new-api 同栈」，但考察开源项目时注意到一组事实：Ory Kratos 用自研的 `ory/pop`，[Dex](https://github.com/dexidp/dex) 用 ent，ZITADEL 用 pgx，Hanko 用 pop——**头部项目的 ORM 各不相同，说明这一层选型更多是团队一致性问题而非技术优劣问题**。
+最初选 GORM 的理由只有「与 new-api 同栈」，但考察开源项目时注意到一组事实：Ory Kratos 用自研的 `ory/pop`，[Dex](https://github.com/dexidp/dex) 用 ent，ZITADEL 用 pgx，Hanko 用 pop——**主流项目的 ORM 各不相同，说明这一层选型更多是团队一致性问题而非技术优劣问题**。
 
 另一个相关原则是数据库 schema 演进（迁移）最好与 ORM 解耦。这里的关键是控制粒度：用 [golang-migrate](https://github.com/golang-migrate/migrate) 管理版本化的 SQL 迁移文件（Ory Talos 也采用这个方案），可以对 DDL 做更细的控制和回滚；ent 自带的 `auto_migrate` 开关则让 ORM 自动推进 schema，更省事但可控性弱一些。两种方式都能走，关键是**只选一种权威来源**，避免混用。
 
