@@ -27,3 +27,126 @@
         });
     }
 </script>
+
+{{/* 目录：桌面端侧边栏展开/收起 + 滚动高亮当前章节。
+     页面有两份目录（桌面侧边栏 / 移动端折叠卡），高亮同步作用于两者 */}}
+<script>
+    (() => {
+        const wrapper = document.querySelector('.post-single-wrapper');
+        const tocContainers = Array.from(document.querySelectorAll('.toc-inner'));
+        if (!wrapper || tocContainers.length === 0) return;
+
+        const toggle = wrapper.querySelector('.toc-toggle');
+        const STORAGE_KEY = 'toc-expanded';
+
+        const setExpanded = (expanded) => {
+            const state = expanded ? 'expanded' : 'collapsed';
+            wrapper.dataset.toc = state;
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', String(expanded));
+                toggle.setAttribute('title', expanded ? '收起目录' : '展开目录');
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY, state);
+            } catch {}
+        };
+
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                setExpanded(wrapper.dataset.toc !== 'expanded');
+            });
+
+            // 恢复上次状态，默认收起。初始恢复不播放展开动画：
+            // 先禁用过渡，应用状态，等首帧绘制后再移除，之后的点击仍有动画
+            let saved = 'collapsed';
+            try {
+                saved = localStorage.getItem(STORAGE_KEY) || 'collapsed';
+            } catch {}
+            wrapper.classList.add('toc-no-anim');
+            setExpanded(saved === 'expanded');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => wrapper.classList.remove('toc-no-anim'));
+            });
+        }
+
+        // 滚动高亮当前章节
+        const links = tocContainers.flatMap(c => Array.from(c.querySelectorAll('a[href^="#"]')));
+        if (links.length === 0) return;
+
+        // 长标题省略后，通过 title 提示完整文本
+        links.forEach(link => {
+            const text = link.textContent.trim();
+            if (text && !link.getAttribute('title')) {
+                link.setAttribute('title', text);
+            }
+        });
+
+        // 目录跳转不做平滑滚动：临时关掉全局 smooth，瞬移到目标后恢复
+        links.forEach(link => {
+            link.addEventListener('click', (e) => {
+                const target = document.getElementById(link.getAttribute('href').slice(1));
+                if (!target) return;
+                e.preventDefault();
+                const root = document.documentElement;
+                root.style.scrollBehavior = 'auto';
+                target.scrollIntoView();
+                root.style.scrollBehavior = '';
+                history.pushState(null, '', link.getAttribute('href'));
+            });
+        });
+
+        const ids = [...new Set(links.map(l => l.getAttribute('href').slice(1)))];
+        const headings = ids.map(id => document.getElementById(id)).filter(Boolean);
+        if (headings.length === 0) return;
+
+        let activeHref = null;
+        const setActive = (href) => {
+            if (href === activeHref) return;
+            activeHref = href;
+            links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === href));
+            // 保持高亮项在目录可视区内：只滚可见的目录容器，不动页面
+            tocContainers.forEach(c => {
+                if (c.offsetParent === null) return; // 隐藏的实例不处理
+                const link = c.querySelector(`a[href="${CSS.escape(href)}"]`);
+                if (!link) return;
+                const cRect = c.getBoundingClientRect();
+                const lRect = link.getBoundingClientRect();
+                if (lRect.top < cRect.top) {
+                    c.scrollTop += lRect.top - cRect.top - 8;
+                } else if (lRect.bottom > cRect.bottom) {
+                    c.scrollTop += lRect.bottom - cRect.bottom + 8;
+                }
+            });
+        };
+
+        let ticking = false;
+        const onScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                let current = null;
+                // 页面滚到底时强制高亮最后一节：
+                // 短尾节的标题可能永远越不过下方的触发线
+                const atBottom = window.innerHeight + window.scrollY
+                    >= document.documentElement.scrollHeight - 2;
+                if (atBottom) {
+                    current = headings[headings.length - 1];
+                } else {
+                    const offset = 100;
+                    for (const heading of headings) {
+                        if (heading.getBoundingClientRect().top <= offset) {
+                            current = heading;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if (current) setActive(`#${current.id}`);
+                ticking = false;
+            });
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    })();
+</script>

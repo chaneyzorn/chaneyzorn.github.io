@@ -637,3 +637,302 @@ details.toc summary:hover .title {
     background: color-mix(in srgb, var(--accent) 30%, transparent);
     color: inherit;
 }
+
+/* ===== 文章目录：可展开侧边栏，融入背景 ===== */
+
+/* 目录面板：无边框，透明融入背景 */
+.toc {
+    margin: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+/* 侧边栏与展开按钮：仅桌面端显示（窄屏目录是文章标题下的 details 折叠卡） */
+.toc-toggle,
+.toc-sidebar {
+    display: none;
+}
+
+/* 移动端折叠卡：主题 details.toc 提供卡片外观，这里只补内容区内边距；
+   不限高——嵌套滚动在移动端是反模式，展开后让列表自然撑开页面即可 */
+.toc-mobile .toc-inner {
+    padding: 0 1.2rem 0.8rem;
+}
+
+/* 折叠卡箭头：隐藏原生三角，换成细线 chevron，收起朝下、展开朝上 */
+.toc-mobile summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.toc-mobile summary::-webkit-details-marker {
+    display: none;
+}
+
+.toc-mobile summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    color: var(--secondary);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+}
+
+.toc-mobile[open] summary::after {
+    transform: rotate(-135deg);
+}
+
+.toc-inner {
+    padding-right: 8px;
+    /* 滚动条平时隐身，hover/聚焦时才显现；轨道始终透明，不占视觉 */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.toc-inner::-webkit-scrollbar {
+    width: 6px;
+}
+
+.toc-inner::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.toc-inner::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.toc-inner:hover,
+.toc-inner:focus-within {
+    scrollbar-color: var(--tertiary) transparent;
+}
+
+.toc-inner:hover::-webkit-scrollbar-thumb,
+.toc-inner:focus-within::-webkit-scrollbar-thumb {
+    background: var(--tertiary);
+}
+
+.toc-inner ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.toc-inner li {
+    margin: 0;
+}
+
+.toc-inner li + li {
+    margin-top: 1px;
+}
+
+.toc-inner a {
+    position: relative;
+    display: block;
+    padding: 0.32rem 0.5rem;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--secondary);
+    text-decoration: none;
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.toc-inner a:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    text-decoration: none;
+}
+
+.toc-inner a.active {
+    color: var(--accent);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* 高亮指示条：常驻但透明，active 时淡入，章节切换更柔和 */
+.toc-inner a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 2px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.toc-inner a.active::before {
+    opacity: 1;
+}
+
+/* 目录首项：文章大标题，字重和颜色强一档，细分隔线与章节列表区分 */
+.toc-inner > a.toc-top {
+    font-weight: 500;
+    color: var(--primary);
+    margin-bottom: 4px;
+    padding-bottom: calc(0.32rem + 4px);
+    border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+}
+
+.toc-inner ul ul {
+    margin-inline-start: 0.75rem;
+    margin-top: 1px;
+}
+
+/* 桌面端：可展开侧边栏 */
+@media screen and (min-width: 1280px) {
+    .toc-mobile {
+        display: none;
+    }
+
+    .main:has(.post-single-wrapper) {
+        max-width: calc(var(--main-width) + var(--gap) * 2);
+        transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .main:has(.post-single-wrapper[data-toc="expanded"]) {
+        max-width: calc(var(--main-width) + 180px + 24px + var(--gap) * 2);
+    }
+
+    .post-single-wrapper {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+    }
+
+    /* 限制文章宽度，防止目录展开时被拉得过宽 */
+    .post-single-wrapper .post-single {
+        flex: 0 1 var(--main-width);
+        max-width: var(--main-width);
+    }
+
+    /* 展开/收起按钮：竖向胶囊，贴在文章左边缘外侧 */
+    .toc-toggle {
+        display: flex;
+        position: fixed;
+        left: calc((100vw - var(--main-width) - var(--gap) * 2) / 2 - 56px);
+        top: 220px; /* 颈部偏下：避开悬浮导航与文章标题区 */
+        z-index: 50;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        width: 34px;
+        padding: 10px 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        /* 与导航双胶囊同一材质：暖纸色 72% 磨砂；阴影比胶囊克制一档 */
+        background: rgba(250, 247, 242, 0.72); /* 亮色兜底 */
+        background: color-mix(in srgb, var(--theme) 72%, transparent);
+        backdrop-filter: blur(14px) saturate(1.6);
+        -webkit-backdrop-filter: blur(14px) saturate(1.6);
+        color: var(--secondary);
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+        box-shadow: var(--shadow-sm);
+        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+            color 0.2s ease, background 0.2s ease, border-color 0.2s ease,
+            box-shadow 0.2s ease;
+    }
+
+    /* 图标在上，竖排"目录"在下 */
+    .toc-toggle-text {
+        writing-mode: vertical-rl;
+        letter-spacing: 0.12em;
+    }
+
+    .toc-toggle-icon {
+        display: flex;
+    }
+
+    .toc-toggle:hover {
+        color: var(--accent);
+        border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    }
+
+    /* 展开状态：按钮着色示意"已开启" */
+    .post-single-wrapper[data-toc="expanded"] .toc-toggle {
+        left: calc((100vw - var(--main-width) - 180px - 24px - var(--gap) * 2) / 2 - 56px);
+        color: var(--accent);
+        border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+
+    /* 暗色模式的兜底色，与导航胶囊一致 */
+    :root[data-theme="dark"] .toc-toggle {
+        background: rgba(24, 23, 21, 0.72);
+        background: color-mix(in srgb, var(--theme) 72%, transparent);
+    }
+
+    /* 目录容器：滚动时粘滞在左侧 */
+    .toc-sidebar {
+        display: flex;
+        flex: 0 0 auto;
+        width: 0;
+        max-width: 0;
+        align-items: flex-start;
+        align-self: flex-start;
+        position: sticky;
+        top: 110px;
+        overflow: hidden;
+        transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+            max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+            margin-right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .post-single-wrapper[data-toc="expanded"] .toc-sidebar {
+        width: 180px;
+        max-width: 180px;
+        margin-right: 24px;
+    }
+
+    .toc {
+        width: 180px;
+        flex: 0 0 auto;
+        padding-top: 8px;
+        opacity: 0;
+        transform: translateX(-12px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .post-single-wrapper[data-toc="expanded"] .toc {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .toc-inner {
+        max-height: calc(100vh - 160px);
+        overflow-y: auto;
+    }
+}
+
+/* 减弱动效：展开/收起与指示条过渡直接跳过 */
+@media (prefers-reduced-motion: reduce) {
+    .main:has(.post-single-wrapper),
+    .toc-toggle,
+    .toc-sidebar,
+    .toc,
+    .toc-inner a::before,
+    .toc-mobile summary::after {
+        transition: none;
+    }
+}
+
+/* 初始恢复展开状态时不播放动画（见 extend_footer.html，首帧绘制后移除） */
+.main:has(.post-single-wrapper.toc-no-anim),
+.post-single-wrapper.toc-no-anim .toc-toggle,
+.post-single-wrapper.toc-no-anim .toc-sidebar,
+.post-single-wrapper.toc-no-anim .toc {
+    transition: none;
+}
