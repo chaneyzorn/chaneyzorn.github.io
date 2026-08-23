@@ -191,7 +191,7 @@ garble 的 `-literals` 模式会对源码中的字符串和字节字面量做 AS
 
 但 `-literals` 只覆盖「源码里的字面量」，有两类数据不在它的处理范围内，我们同样做过验证。
 
-**`-ldflags -X` 注入的值不会被混淆。** 用 garble v0.17.0 + Go 1.26.5 验证：第 1 节的注入命令产出的二进制中，`REAL_PUBLIC_KEY_VALUE` 仍能被 `strings` 找到，而源码中硬编码的普通常量在同一次构建里是被混淆的。另一个问题是 garble 会重命名标识符，`-X` 指定的包路径和变量名需要 garble 能正确解析。garble 仓库也有相关 issue，例如 [#861](https://github.com/burrowers/garble/issues/861) 报告 `-literals` 与 `-ldflags` 配合时字面量未被混淆，[#820](https://github.com/burrowers/garble/issues/820) 则显示 ldflags 在 garble 测试套件中曾触发 ABI 相关失败。
+**`-ldflags -X` 注入的值不会被混淆。** 用 garble v0.17.0 + Go 1.26.5 验证：第 1 节的注入命令产出的二进制中，`REAL_PUBLIC_KEY_VALUE` 仍能被 `strings` 找到，而源码中硬编码的普通常量在同一次构建里是被混淆的。另一个问题是 garble 会重命名标识符，`-X` 指定的包路径和变量名需要 garble 能正确解析。garble 仓库的 issue [#717](https://github.com/burrowers/garble/issues/717) 跟踪的正是这个问题：`-literals` 与 `-ldflags` 配合时注入值未被混淆，至今未修复（README 中「`-literals` 也会替换 `-X` 注入的字符串」的说法与此不符，属于过时信息）；[#820](https://github.com/burrowers/garble/issues/820) 则显示 ldflags 在 garble 测试套件中曾触发 ABI 相关失败。
 
 **`go:embed` 嵌入的文件字节不会被混淆。** garble 能正常编译 embed，但经实测，嵌入的明文会原样出现在二进制里。embed 数据在二进制里是一个连续的 blob，前面跟着 Go runtime 生成的 slice header，garble 不会处理这个 header，也不会拆分或伪装这块数据。这正是第 1 节选择对公钥做可逆变换、而不是直接嵌入明文的原因。
 
