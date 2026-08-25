@@ -157,6 +157,11 @@ params:
     feedId: 94402801171278848
     userId: 60932538427591680
 
+taxonomies:
+  tag: tags
+  category: categories
+  series: series
+
 menu:
   main:
     - identifier: tags

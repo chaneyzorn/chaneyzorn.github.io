@@ -4,7 +4,6 @@ date: {{ .Date }}
 isCJKLanguage: true
 draft: true
 tags: ["other"]
-# description: "{{ replace .Name "-" " " | title }}"
 # canonicalURL: "https://chaneyzorn.github.io/posts/{{ .Name }}"
 cover:
     image: "<image path/url>" # image path/url
