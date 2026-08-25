@@ -254,6 +254,8 @@ cat <<'EOF' | sudo tee -a /etc/containerd/config.toml
   endpoint = ['https://quay.m.daocloud.io', 'https://quay.io']
 [plugins.'io.containerd.cri.v1.images'.registry.mirrors.'gcr.io']
   endpoint = ['https://gcr.m.daocloud.io', 'https://gcr.io']
+[plugins.'io.containerd.cri.v1.images'.registry.mirrors.'ghcr.io']
+  endpoint = ['https://ghcr.m.daocloud.io', 'https://ghcr.io']
 [plugins.'io.containerd.cri.v1.images'.registry.mirrors.'registry.k8s.io']
   endpoint = ['https://k8s.m.daocloud.io', 'https://registry.k8s.io']
 EOF
