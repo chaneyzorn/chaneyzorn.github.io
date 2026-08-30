@@ -55,6 +55,14 @@ markdown lint 使用 [rumdl](https://github.com/rvben/rumdl)，配置在 `rumdl.
 - 文章 front matter 遵循 `archetypes/default.md`：`title`、`date`、`isCJKLanguage: true`、`draft`、`tags` 为必填/常用字段；**不使用 `description` 字段**，让 PaperMod 自动从正文提取摘要
 - 新建文章默认 `draft: true`，发布前改为 `false`
 - 新建文章统一使用 **page bundle** 形式：建目录 `content/<section>/<slug>/`，内含 `index.md`；有图片等资源时在同一目录下建 `asserts/`（本项目资源目录习惯命名为 `asserts/`，引用时注意保持一致的拼写），并在 front matter 中设置 `cover.relative: true`。历史遗留的单文件 `content/<section>/<slug>.md` 保持现状，后续若迁移可顺手改为 page bundle
+- 图片入库前必须先压缩：**统一转为 WebP，宽度不超过 1600px，quality 85**。本机用 ffmpeg（libwebp 编码器，cwebp 未安装）：
+
+  ```sh
+  ffmpeg -hide_banner -loglevel error -y -i input.png \
+    -vf "scale='min(1600,iw)':-1" -c:v libwebp -quality 85 output.webp
+  ```
+
+  转换后放入对应 page bundle 的 `asserts/` 目录，删除原始大体积图片，正文中以相对路径引用
 - 图片引用支持 `#center` 等 PaperMod 的 URL fragment 样式
 - 代码高亮使用 Chroma（`markup.highlight` 配置），支持 `hl_lines` 等属性
 
