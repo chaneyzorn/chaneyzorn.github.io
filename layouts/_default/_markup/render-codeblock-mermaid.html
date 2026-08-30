@@ -1,5 +1,9 @@
 {{/* Mermaid 代码块渲染钩子：```mermaid 代码块渲染为图表容器，
-     由 extend_footer.html 中的脚本检测并渲染 */}}
-<pre class="mermaid">
-    {{- .Inner | safeHTML -}}
-</pre>
+     由 extend_footer.html 中的脚本检测并渲染；
+     未渲染前显示提示，渲染成功后由 JS 隐藏。 */}}
+<div class="mermaid-block">
+    <pre class="mermaid">
+        {{- .Inner | safeHTML -}}
+    </pre>
+    <p class="mermaid-hint">Mermaid 图表需要浏览器启用 JavaScript 并从 CDN 加载 mermaid 库才能渲染；某些网络环境或移动端可能加载失败，此时下方显示的是图表源码。</p>
+</div>

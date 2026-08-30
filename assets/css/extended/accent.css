@@ -553,15 +553,93 @@ details.toc summary:hover .title {
 
 /* ===== Mermaid 图表居中 ===== */
 
-.mermaid {
-    display: flex;
-    justify-content: center;
+.mermaid-block {
     margin: 1.5rem 0;
 }
 
-.mermaid svg {
+.mermaid-block .mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+}
+
+.mermaid-block .mermaid svg {
     max-width: 100%;
     height: auto;
+}
+
+.mermaid-hint {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--secondary);
+    margin-top: 0.5rem;
+}
+
+/* Mermaid 点击放大模态层 */
+.mermaid-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+}
+
+.mermaid-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.mermaid-modal-content {
+    position: relative;
+    z-index: 1001;
+    background: var(--theme);
+    padding: 2rem;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    width: min(95vw, 1200px);
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.mermaid-modal-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    width: 2rem;
+    height: 2rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.15s ease;
+}
+
+.mermaid-modal-close::before,
+.mermaid-modal-close::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 1px;
+}
+
+.mermaid-modal-close::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mermaid-modal-close::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.mermaid-modal-close:hover {
+    background: var(--tertiary);
 }
 
 /* ===== 搜索页 ===== */
