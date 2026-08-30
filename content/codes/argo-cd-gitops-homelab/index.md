@@ -147,6 +147,10 @@ flowchart TD
     B -->|发现| H[...]
 ```
 
+全部同步完成后，Argo CD Web UI 中的 Applications 列表如下，所有应用都处于 `Healthy` 和 `Synced` 状态：
+
+![Argo CD Web UI 中的 Applications 列表](asserts/argocd_web_ui.webp#center)
+
 ## 3. 实践中遇到的几个典型问题
 
 ### 3.1 给 repo-server 配置 HTTP 代理
