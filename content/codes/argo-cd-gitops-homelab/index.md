@@ -2,7 +2,7 @@
 title: "Homelab k8s 上的 Argo CD GitOps 实践"
 date: 2026-08-30T00:00:00+08:00
 isCJKLanguage: true
-draft: true
+draft: false
 tags: ["kubernetes", "argocd", "gitops", "homelab"]
 ---
 
