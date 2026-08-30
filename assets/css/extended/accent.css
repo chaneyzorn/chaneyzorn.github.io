@@ -605,6 +605,12 @@ details.toc summary:hover .title {
     overflow: auto;
 }
 
+/* 图表带有内联 max-width，宽度撑不满内容框时保持水平居中 */
+.mermaid-modal-content svg {
+    display: block;
+    margin: 0 auto;
+}
+
 .mermaid-modal-close {
     position: absolute;
     top: 0.5rem;
