@@ -43,6 +43,7 @@
     function openMermaidModal(svg) {
         const modal = document.createElement('div');
         modal.className = 'mermaid-modal';
+        modal.tabIndex = -1; // 使模态层可聚焦，Esc 关闭才能生效
         modal.innerHTML = `
             <div class="mermaid-modal-backdrop"></div>
             <div class="mermaid-modal-content">
@@ -69,6 +70,55 @@
         document.body.style.overflow = 'hidden';
         modal.focus();
     }
+</script>
+
+{{/* 正文图片：点击放大模态层，交互与 Mermaid 模态层一致
+     （点遮罩/图片/关闭按钮或 Esc 关闭，打开时锁定页面滚动）。
+     跳过已被链接包裹的图片，避免与链接跳转冲突。 */}}
+<script>
+    (() => {
+        const images = [...document.querySelectorAll('.post-content img')]
+            .filter(img => !img.closest('a'));
+        if (images.length === 0) return;
+
+        images.forEach(img => {
+            img.addEventListener('click', () => openImageModal(img));
+        });
+
+        function openImageModal(img) {
+            const modal = document.createElement('div');
+            modal.className = 'img-zoom-modal';
+            modal.tabIndex = -1; // 使模态层可聚焦，Esc 关闭才能生效
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'img-zoom-backdrop';
+
+            const zoomed = document.createElement('img');
+            zoomed.className = 'img-zoom-content';
+            zoomed.src = img.currentSrc || img.src;
+            zoomed.alt = img.alt || '';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'img-zoom-close';
+            closeBtn.setAttribute('aria-label', '关闭');
+
+            modal.append(backdrop, zoomed, closeBtn);
+
+            const close = () => {
+                modal.remove();
+                document.body.style.overflow = '';
+            };
+
+            backdrop.addEventListener('click', close);
+            zoomed.addEventListener('click', close);
+            closeBtn.addEventListener('click', close);
+            modal.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+            document.body.appendChild(modal);
+            document.body.style.overflow = 'hidden';
+            modal.focus();
+        }
+    })();
 </script>
 
 {{/* 目录：桌面端侧边栏展开/收起 + 滚动高亮当前章节。
