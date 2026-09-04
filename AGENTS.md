@@ -54,6 +54,7 @@ markdown lint 使用 [rumdl](https://github.com/rvben/rumdl)，配置在 `rumdl.
 
 - 文章 front matter 遵循 `archetypes/default.md`：`title`、`date`、`isCJKLanguage: true`、`draft`、`tags` 为必填/常用字段；**不使用 `description` 字段**，让 PaperMod 自动从正文提取摘要
 - 新建文章默认 `draft: true`，发布前改为 `false`
+- 发布时（将 `draft` 改为 `false` 时）必须把 `date` 一并更新为发布时间，而不是保留草稿创建时的时间
 - 新建文章统一使用 **page bundle** 形式：建目录 `content/<section>/<slug>/`，内含 `index.md`；有图片等资源时在同一目录下建 `asserts/`（本项目资源目录习惯命名为 `asserts/`，引用时注意保持一致的拼写），并在 front matter 中设置 `cover.relative: true`。历史遗留的单文件 `content/<section>/<slug>.md` 保持现状，后续若迁移可顺手改为 page bundle
 - 图片入库前必须先压缩：**统一转为 WebP，宽度不超过 1600px，quality 85**。本机用 ffmpeg（libwebp 编码器，cwebp 未安装）：
 
