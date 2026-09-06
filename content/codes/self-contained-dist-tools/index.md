@@ -1,164 +1,240 @@
 ---
-title: "基础环境检查工具的自包含分发"
-date: 2026-08-31T00:00:00+08:00
+title: "检查工具的自包含分发"
+date: 2026-09-06T21:19:33+08:00
 isCJKLanguage: true
-draft: true
-tags: ["ansible", "python", "shiv", "bare-metal"]
+draft: false
+tags: ["ansible", "python", "shiv", "zipapp", "patchelf", "bare-metal", "offline"]
 ---
 
-最近根据项目需求，需要在集群部署之前对基础环境进行检查，以减少后续部署和上线的阻碍。检查的目标环境的操作系统基线是 ubuntu 22.04/24.04，只安装了基本的系统和驱动，因此不包含额外可以利用的组件，比如 docker 和 nodejs 等，且环境通常不与外网连通，无法临时在线安装检查所需的工具。
+最近做了一个检查工具，对服务器基础环境进行检查，提前暴露可能影响后续部署和上线的问题。目标环境仅安装 Ubuntu 22.04/24.04 和必要的硬件驱动，不包含其他可利用的组件（比如 Docker），且通常不与外网连通，无法在线安装所需的工具。
 
-在设计检查工具时，目标环境无依赖可用，因此一个核心考量是，让执行检查所需的所有代码逻辑、依赖库、使用的三方工具都自包含在检查工具内，以避免目标环境依赖缺失问题，且确保不对目标环境做侵入式的工具植入，不触及系统自身的包管理，保持环境纯净。
+目标环境没有可用的依赖，因此一个核心考量是：让执行检查所需的代码、依赖库、三方工具都自包含在检查工具内，同时不触及系统自身的包管理和标准路径，保持环境纯净。在多节点上执行任务，一个主流选择是 [Ansible](https://github.com/ansible/ansible)；Ubuntu 内置了 Python 3.10+，这一部分可以直接利用，除此之外的部分都由检查工具自包含。下文把运行检查工具、发起检查的机器称为控制节点，被检查的服务器称为目标节点。具体来说包含这些部分：
 
-对于多节点上的任务执行，我们选择了主流的 Ansible，Python 是我们的起步依赖。好消息是 ubuntu22.04 基础系统内置了 python3.10，所以我们将 python3.10+ 作为目标环境基线的一部分，除此之外的部分都由检查工具自包含。具体来说，在 python 已经是基座的情况下，包含这些部分：
-
-- 使用 python 开发的巡检工具主体代码，以及它所需的第三方 python 依赖库；
-- Ansible 命令工具，以及它的 python 依赖库；
-- 执行检查所需的三方工具，比如 nvmecli 和 nccl-test 等工具；
-- 汇报检查结果时所需的 html 单文件模板；
+- 使用 Python 开发的检查工具主体代码，以及所需的依赖；
+- Ansible 命令工具；
+- 执行检查所需的三方工具，比如 [nvme-cli](https://github.com/linux-nvme/nvme-cli) 和 [nccl-tests](https://github.com/NVIDIA/nccl-tests) 等；
+- 检查报告所需的 HTML 单文件模板；
 
 最终交付物只有一个压缩包，用户解压后只需要执行：
 
 ```bash
-dist/bare-metal-check run \
+dist/bare-metal-check.pyz run \
   --nodes <node1>,<node2>,<node3>
 ```
 
-运行时不需要安装任何依赖。下面主要说明这几个部分是如何自包含在检查工具内的，以及在执行过程中如何分发到目标环境中。
+检查完毕后会启动一个 HTTP 服务并打开浏览器查看报告，报告支持下载和离线查看，整个过程不需要安装任何依赖。整体的分发与执行流程如下：
 
-## 2. CLI 连同依赖打成单文件 pyz
+```mermaid
+flowchart TD
+    subgraph ctrl[控制节点]
+        CLI["bare-metal-check.pyz<br/>默认入口：检查 CLI"]
+        PB["bare-metal-check.pyz<br/>入口切换为 ansible-playbook"]
+        TAR["预构建 tar 归档包<br/>nvme、nccl-tests 等"]
+        CLI -->|SHIV_CONSOLE_SCRIPT 切换入口| PB
+    end
+    subgraph nodes[目标节点]
+        N1["node1"]
+        N2["node2"]
+        N3["nodeN"]
+    end
+    PB -->|ssh 下发检查任务| N1 & N2 & N3
+    TAR -.->|按需分发，解压到 /opt/ 下| N1 & N2 & N3
+    N1 & N2 & N3 -->|检查结果 JSON| RPT["单文件 HTML 报告"]
+    RPT -->|"file:// 离线查看，或临时 HTTP 服务在线查看"| BR["浏览器"]
+```
 
-### 2.1 为什么选 shiv
+下面说明这几个部分如何自包含在检查工具内，以及如何在执行过程中分发到目标环境。
 
-CLI 本身依赖不多，但 `ansible-core` 会带来 `cryptography`、`cffi`、`PyYAML`、`MarkupSafe` 这类带原生扩展的传递依赖。可选的单文件方案里，PyInstaller 一类是把解释器也打进去，体积和构建复杂度都高；[shiv](https://github.com/linkedin/shiv) 基于 Python 标准库的 [zipapp](https://docs.python.org/3/library/zipapp.html) 实现——把项目代码和全部依赖的 wheel 打包进一个 zip，加一行 shebang，就是一个可执行文件。前提是控制节点上有兼容的 Python 3 解释器，这在目标场景里可以接受，换来的是产物只有约 9 MB、构建过程简单。
+## 1. 将 Python 程序打包为单体文件
 
-实际打包命令（`build/targets/pyz/entrypoint.sh`）：
+Python 程序由若干 `py` 文件和三方依赖组成。检查工具是一个临时使用的工具，不希望将这些文件和依赖放到全局标准路径下；除了把文件和依赖隔离在独立环境中，另一个目标是让用户完全不需要 Python 相关的背景知识，把工具当作一个普通可执行文件，上手即用。
+
+### 1.1 主流方案比较
+
+将 Python 程序打包为可执行产物的常见方案如下：
+
+| 方案 | 产物形态 | Python 解释器 | 典型体积 | 适合场景 |
+|---|---|---|---|---|
+| [PyInstaller](https://pyinstaller.org/) | 单可执行文件 | 内置 | 大 | GUI/桌面应用、Windows 分发 |
+| [cx_Freeze](https://github.com/marcelotduarte/cx_Freeze) | 目录或单文件 | 内置/外部 | 较大 | 跨平台桌面程序 |
+| [Nuitka](https://nuitka.net/) | 编译后的二进制 | 内置 | 较大 | 性能敏感、需要保护源码 |
+| [pex](https://github.com/pex-tool/pex) | 单 `.pex` 文件 | 外部 | 中等 | 多解释器环境、服务端脚本 |
+| [zipapp](https://docs.python.org/zh-cn/3/library/zipapp.html) | 单 `.pyz` 文件 | 外部 | 小 | 依赖系统 Python 的 CLI 工具 |
+| [venv](https://docs.python.org/zh-cn/3/library/venv.html) | 目录 | 外部 | 小 | 可联网、可写安装脚本的环境 |
+
+这些方案的关键差异在于是否把 Python 解释器本身也打包进去：PyInstaller、Nuitka 把解释器一起分发，产物独立但体积大；zipapp、pex 假设目标环境已有兼容的 Python，只打包代码和依赖，产物小但需要外部解释器。
+
+### 1.2 zipapp + shiv
+
+目标环境已经确定有 Python 3.10+，再打包一个解释器进去既浪费空间也增加复杂度。
+
+[zipapp](https://docs.python.org/zh-cn/3/library/zipapp.html) 从 Python 3.5 起内置于标准库，支持创建包含 Python 代码的压缩文件，直接由 Python 解释器执行，可以理解为带 shebang 的 zip 文件。
+
+```sh
+python -m zipapp myapp -m "myapp:main"
+python myapp.pyz
+<output from myapp>
+```
+
+[shiv](https://github.com/linkedin/shiv) 在 zipapp 的基础上，把第三方依赖一起装进 zip。检查工具的依赖里包含 `ansible-core`，它会拉入 `cryptography`、`cffi`、`PyYAML`、`MarkupSafe` 等带原生扩展的间接依赖。只要这些库提供 [manylinux](https://github.com/pypa/manylinux) wheel，shiv 就可以把 wheel 原样放进 zip，不需要在构建时本地编译；代价是构建产物与平台和架构绑定。例如在 x86_64 Linux 上构建，产物中使用的就是对应的 x86_64 Linux wheel；如果需要 arm64 或 macOS 产物，则要在对应平台上重新构建。
+
+打包方式如下：
 
 ```bash
-uv run --no-dev --group packaging --locked shiv \
-    --output-file "$output" \
-    --entry-point bare_metal_check.cli:main \
-    --python '/usr/bin/env python3' \
-    ".[ansible]"
+shiv \
+  --output-file bare-metal-check.pyz \
+  --entry-point bare_metal_check.cli:main \
+  --python '/usr/bin/env python3' \
+  .
 ```
 
-其中几处细节的作用：
+shiv 默认会把构建时本机解释器的绝对路径写进 zip 首行的 shebang，这个路径在目标环境中可能不存在；`--python '/usr/bin/env python3'` 把 shebang 改为从 PATH 查找解释器，避免这个问题。`--entry-point` 指定启动时执行的函数。可以配合 [uv](https://docs.astral.sh/uv/) 的 `uv.lock` 锁定依赖版本，构建时用 `uv run --locked shiv ...` 调用，保证每次构建的依赖一致。
 
-- **`uv run --locked`** 保证 shiv 解析依赖时严格遵守 `uv.lock`，构建结果可复现。
-- **`--python '/usr/bin/env python3'`** 指定产物首行 shebang。如果不指定，shiv 会把构建容器中的解释器绝对路径写进去，部署到目标环境后可能找不到解释器。
-- `--entry-point` 指定 zip 启动时执行的入口函数，这里是命令行框架 Click 定义的命令组 `bare_metal_check.cli:main`。
-- 依赖里带原生扩展的库（cryptography、PyYAML 等）都有 manylinux wheel，shiv 直接使用这些 wheel，不需要在构建时编译；代价是**产物与平台/架构绑定**——容器里构建出来的就是 `linux-x86_64`，文件名里也带上了平台标识，如果需要其他平台的产物，就要在对应平台上重新构建。
+这种方式的产物体积只有几 MiB，构建流程也简单。对于「目标环境只有系统 Python、不能联网使用 pip」的场景，是贴合的选择。
 
-### 2.2 在容器内构建
+## 2. 让 Ansible 复用同一个 pyz
 
-所有构建目标统一走 `build/build.sh <target>` → `build/lib/run-in-container.sh` 这条调用路径。后者是一个通用的容器封装：读取 `build/targets/<target>/config.sh` 里声明的 Dockerfile、入口脚本、输出目录和挂载方式，然后启动容器执行入口脚本。
+检查工具打包进 pyz 后，接下来要处理的问题是：Ansible 由哪里提供、如何调用？有以下几种选择：
 
-两个设计细节：
+| 方案 | 是否自包含 | 与 pyz 统一构建打包 | 说明 |
+|---|---|---|---|
+| 依赖环境中预装的 Ansible | 否 | 差 | 现场需单独安装，会污染环境 |
+| 在交付包里额外放一个 ansible 二进制 | 部分 | 中 | 多一个需要单独维护的文件 |
+| 同一个 pyz 通过环境变量切换入口 | 是 | 高 | 构建和打包与 pyz 完全一致 |
 
-- **镜像 tag 由 Dockerfile 内容的 sha256 派生**。`pyz`、`html-report`、`packall`、`diagnostic` 四个目标共用一个 `common` builder 镜像（Ubuntu 22.04 + Python/uv + Node/npm，以及供 `diagnostic` 目标使用的诊断工具链，见第 4 节），只要 Dockerfile 没变就复用本地镜像；`nccl-tests` 额外把 CUDA 基础镜像名混入 hash，保证不同 CUDA/Ubuntu 组合不混用。
-- **容器以当前用户 UID/GID 运行**（`--user $(id -u):$(id -g)`），构建产物直接归宿主用户，避免了 Docker 构建常见的 root 属主文件问题。
+第三种思路最符合「单文件、单 Python 环境、零额外依赖」的目标。
 
-## 3. Ansible 复用同一份 pyz：SHIV_CONSOLE_SCRIPT
+### 2.1 SHIV_CONSOLE_SCRIPT 机制
 
-CLI 执行检查时需要调用 `ansible-playbook` 和 `ansible-inventory`。常规做法是从 PATH 找这两个命令，但那意味着现场还得安装一份版本对得上的 Ansible——自包含就失效了。
+shiv 在打包时会执行一次 pip 安装，`ansible-core` 提供的 `ansible-playbook`、`ansible-inventory` 等可执行入口都会被放进 zip 内的 `site-packages/bin/` 目录。shiv 启动时如果发现 `SHIV_CONSOLE_SCRIPT` 环境变量，就不执行默认的 `--entry-point`，而是执行 zip 里同名的入口脚本。
 
-这里用到了 shiv 的一个内建机制：**`SHIV_CONSOLE_SCRIPT` 环境变量**。shiv 打包时会执行一次 pip 安装，依赖包（ansible-core）的所有 console scripts 都被收进 zip 内的 `site-packages/bin/`。运行时如果这个环境变量有值，shiv 的 bootstrap 就不执行构建时指定的默认入口，转而执行 zip 里同名的 console script。
+也就是说，同一个 `.pyz` 文件有两种启动方式：
 
-所以 runner 调用 Ansible 的方式是——**让同一个 pyz 再执行一次，只是换成 Ansible 的入口**（`src/bare_metal_check/runner.py`）：
+```sh
+# 默认入口：运行 CLI
+python3 bare-metal-check.pyz run --nodes ...
+
+# 切换入口：运行 ansible-playbook
+SHIV_CONSOLE_SCRIPT=ansible-playbook python3 bare-metal-check.pyz site.yml
+```
+
+实际代码中，调用方只需设置好环境变量，再用同一个 pyz 路径启动子进程即可：
 
 ```python
-def _ansible_cmd(self, console_script: str):
-    env = self._ansible_env()
-    env["SHIV_CONSOLE_SCRIPT"] = console_script
-    return [sys.executable, str(self.pyz_path)], env
+env = os.environ.copy()
+env["SHIV_CONSOLE_SCRIPT"] = "ansible-playbook"
+subprocess.run([sys.executable, pyz_path, playbook, ...], env=env)
 ```
 
-子进程命令是 `python3 <同一个 .pyz> ...`，靠 `SHIV_CONSOLE_SCRIPT=ansible-playbook` 切换到包内 ansible-core 的入口。CLI 和 Ansible 用的是同一个 zip 里的依赖，版本必然一致，消除了「控制节点上 Ansible 版本不对」这一类问题。
+### 2.2 限定从 pyz 启动
 
-配套地，runner 在初始化时强制自检，防止从源码或 venv 直接运行（那种情况下 `SHIV_CONSOLE_SCRIPT` 机制不成立）：
+Python 程序可以有很多种构建和调用方式，而检查工具希望限定为只以 zipapp 方式执行，`SHIV_CONSOLE_SCRIPT` 也只有在文件确实是 zipapp 时才有效。因此检查工具在启动时会检查 `sys.argv[0]` 是预期的 `.pyz` 文件，并使用同一个文件作为调用 Ansible 的入口；否则直接退出，提醒用户从 `.pyz` 启动。
 
-```python
-pyz = Path(sys.argv[0]).resolve()
-if pyz.is_file() and zipfile.is_zipfile(pyz):
-    return pyz
-# 否则报错退出：must be run from the packaged .pyz executable
+这样 CLI 和 Ansible 使用的是同一个 zip 里的库，版本必然一致，也避免了在现场再装一份 Ansible。
+
+## 3. 离线工具的构建与分发
+
+CLI 和 Ansible 已经能随 pyz 一起分发，还剩下目标节点上执行检查所需的工具。例如 `dmidecode`、`smartctl`、`lspci`、`nvme` 等命令和 NCCL 测试程序，目标环境里不一定有，也无法通过 apt 在线安装。
+
+### 3.1 可选思路
+
+| 方案 | 是否自包含 | 对环境的影响 | 说明 |
+|---|---|---|---|
+| 目标节点 apt 在线安装 | 否 | 介入系统包管理 | 现场无外网，且会污染被检环境 |
+| 通过 Docker 镜像运行检查 | 否 | 需要容器运行时 | 目标节点不一定有 Docker，镜像守护进程本身会改变环境 |
+| 控制节点分发预构建的 tar 归档包 | 是 | 仅写入 `/opt/` 下的独立目录 | 不依赖系统包管理，按需安装，可校验完整性，通过 PATH 环境变量控制调用 |
+
+由于目标环境的约束，这里选择第三种方案：由控制节点校验并向目标节点分发预构建的 tar 归档包。归档在目标节点上解压到 `/opt/` 下的独立目录，再通过 PATH 环境变量让检查命令优先使用归档内的工具，而不是系统路径里的版本。
+
+### 3.2 构建与解压位置无关的归档
+
+离线归档包里包含命令二进制和它们依赖的动态库，核心问题是：如何让这些二进制在目标节点的 `/opt/...` 目录下找到这些库，而不是依赖系统路径？
+
+Linux 可执行文件通过 `rpath`（运行时库搜索路径）决定从哪里加载动态库。rpath 通常写成绝对路径，比如 `/usr/lib/x86_64-linux-gnu`，这会导致二进制只能在该固定位置找到库。为了让一个 tar 包在任意解压位置都能工作，需要让二进制从它自己所在的位置出发去查找库。
+
+Linux 动态链接器提供了一个标准机制来实现这一点：`$ORIGIN` 是 glibc [`ld.so`](https://www.man7.org/linux/man-pages/man8/ld.so.8.html) 支持的特殊标记，表示二进制文件自身所在的目录。借助这个标记，rpath 可以写成相对路径，例如 `$ORIGIN/../lib` 表示「从二进制所在的目录往上退一级，再进入 lib 目录」。
+
+[`patchelf`](https://github.com/NixOS/patchelf) 用于修改已有二进制的 rpath，例如：
+
+```sh
+patchelf --set-rpath '$ORIGIN/../lib' bin/<tool>
 ```
 
-判定条件只有一个：`sys.argv[0]` 指向的文件本身是 zip 格式。这也是 CLI 约定「必须从 `.pyz` 启动」的原因。
+这样无论归档解压到 `/opt/bare-metal-check-tools` 还是其他目录，`bin/<tool>` 都会去 `../lib` 找自己的私有库。
 
-## 4. 离线工具的构建与分发
+不同类型的工具，构建方式不同。
 
-检查需要在目标节点上运行 `dmidecode`、`ethtool`、`iperf3`、`nvme`、`smartctl`、`lspci` 等诊断命令，以及 NCCL 性能测试。现场离线，apt 不可用；目标节点不一定有容器运行时，引入镜像守护进程本身还会改变被检环境，因此我排除了 Docker 镜像方案，改为由**控制节点校验并向目标节点分发离线 tar 归档**。
+**`dmidecode`、`lspci`、`nvme` 这类命令**来自 Ubuntu 软件包里的现成二进制，构建方式更接近「重打包」：在干净的 Ubuntu 22.04 容器里用 apt 安装所需软件包，把二进制拷出来，再用 `ldd` 扫描每个二进制依赖的共享库。动态链接器和 glibc 等基础库由 Ubuntu 系统本身提供，无需打包，其余私有库才拷贝进归档。选择在 Ubuntu 22.04 上构建这份归档，是因为其 glibc 版本较低，产物在 glibc 更新的 Ubuntu 24.04 上也能运行。
 
-### 4.1 两类归档的构建
+**NCCL 测试工具则必须从源码编译**：它依赖特定版本的 NCCL、CUDA 和 GPU 架构，目标节点上这些组件的版本无法预期。构建时在一个带 CUDA toolkit（开发工具包）的容器里固定源码版本并编译，再连同 NCCL 库和 Open MPI 一起打包。它的二进制同样用 `patchelf` 改成相对路径的 rpath，让命令在解压目录内找到所有依赖。
 
-**diagnostic-tools**：16 个用户态诊断命令。构建时在 Ubuntu 22.04 容器里用 apt 安装对应的软件包，再把二进制连同它们的私有动态库一起拷贝到归档中：
+无论哪一类归档，都不包含 NVIDIA 驱动、CUDA toolkit、OFED（InfiniBand 驱动栈）、固件、内核模块等与目标环境绑定的组件。这些属于目标节点的既有条件，缺失时应由检查项暴露，而不是由检查工具补齐。唯一的例外是 CUDA 运行时库（libcudart）：NCCL 测试运行需要它，因此随 NCCL 归档一起打包。
 
-- `cp -L` 解引用符号链接，二进制进 `bin/`；
-- 对每个二进制跑 `ldd`，跳过动态链接器和 glibc 家族（libc/libm/libpthread 等，由目标系统提供），其余私有库拷进 `lib/`；
-- `patchelf --set-rpath '$ORIGIN/../lib'` 让二进制只从包内找私有库。
+两类归档的共同点是：都用 `patchelf` 把绝对路径改成相对路径，使 tar 包可以在目标节点的任意位置解压运行。
 
-在 22.04 上构建是为了 glibc 向下兼容（22.04 和 24.04 的目标节点通用）。构建时还会在包里写入一份 `BUILD-INFO.txt`，明确声明**不含** NVIDIA 驱动、CUDA toolkit、OFED（RDMA 驱动栈）、固件、内核模块——这些属于被检对象，由目标环境提供，缺失时应由检查报错暴露，而不是由工具包代为提供。
+### 3.3 清单、校验与按需分发
 
-**nccl-tests**：用 `nvidia/cuda:<ver>-devel-ubuntu<ver>` 做基础镜像，从源码编译固定版本的 NCCL（v2.30.7，固定到 commit）、nccl-tests（v2.19.7）和 Open MPI（4.1.6，tarball 固定 SHA-256）。克隆源码时同时核对 tag 和 commit，不使用浮动引用。产物里 `libnccl.so.2`、`libcudart.so` 和 Open MPI 一并打入，同样用 `patchelf` 把 rpath 改成 `$ORIGIN` 相对路径。针对 Ubuntu 22.04 和 24.04 分别构建一份归档，文件名包含完整版本信息：
+每个离线归档对应一份清单（manifest），记录适用节点角色、适用 OS 版本、安装目的地、归档内必须存在的路径等元信息。清单纳入版本管理，但**不记录 size/sha256**；完整性数据属于构建产物，由构建脚本生成单独的校验文件。打包交付时会强制检查清单声明的每个归档都存在，且重新计算的 sha256 与校验文件一致。
 
-```text
-nccl-tests-2.19.7-nccl-2.30.7-cuda13.0-ubuntu22.04-amd64.tar.gz
+分发不是一开始就把所有归档推送到全部节点，而是按检查阶段和节点角色按需进行，整体流程如下：
+
+```mermaid
+flowchart LR
+    M["清单 manifest"] --> S["控制节点校验<br/>按 OS、架构、角色筛选<br/>校验 sha256"]
+    S --> D["按需分发<br/>通用工具全量下发<br/>主动测试工具条件下发"]
+    D --> I["幂等安装<br/>摘要一致则跳过<br/>校验后解压到 /opt/ 下"]
 ```
 
-### 4.2 清单与指纹分离
+1. **控制节点校验**：根据目标节点的 OS 版本、架构和角色，从清单中筛选适用的归档，并校验其完整性。
+2. **按需分发**：通用命令工具在检查初期分发给所有节点；NCCL 测试这类会在节点上施加负载的主动测试（区别于只读检查），只在 GPU 节点通过驱动、CUDA 等前置资格检查并明确允许主动测试后才下发。
+3. **幂等安装**：目标节点上记录已安装归档的摘要，与待安装的归档一致则跳过传输；需要安装时先传到临时目录，校验后再解压到 `/opt/` 下的独立目录。
 
-离线包的信息拆成两份文件，职责不同：
+## 4. HTML 报告：单文件自包含 + 数据独立
 
-- **清单 manifest**（`ansible/offline_packages/manifests/target-node-ubuntu.yml`）纳入 Git 版本管理，声明每个包的 `filename`、适用角色（cpu/gpu）、适用 OS 版本和架构、安装目的地、`required_paths` 等。它**故意不含 size/sha256**——完整性数据是构建期事实，不该手工维护。
-- **checksums.json** 由 `build/lib/generate-checksums.py` 在每个归档构建完成后重新扫描生成，记录 size + sha256。它和归档一起被 gitignore，不纳入版本管理。
+报告是检查工具的最终产出，而查看报告的环境同样可能离线、没有 Node.js、甚至没有 Python，因此报告本身也要自包含：一个文件、零外部依赖、双击就能打开。报告的实际页面如下：
 
-`make packall` 装配交付包时强制执行 `--check`：manifest 声明的每个 `filename` 必须存在于磁盘，且重新计算的 size/sha256 与 checksums.json 一致，否则装配直接失败——这里只校验，不会重新生成指纹。
+![检查报告的批次矩阵与节点详情](asserts/check-report.webp#center)
 
-### 4.3 校验、按需分发与安装
+常见的报告形态有几种：
 
-分发由 `02_offline_tools` role 完成，流程如下：
+| 方案 | 离线可用 | 是否需要本地服务 | 说明 |
+|---|---|---|---|
+| 静态 HTML + 外部 JSON | 否 | 是 | 需要 fetch，file:// 下受浏览器安全限制 |
+| 单文件 HTML，数据内联 | 是 | 否 | 所有资源在文件内部，任意位置打开 |
+| 本地 HTTP 服务动态渲染 | 是 | 是 | 需要服务进程，服务关闭后无法查看 |
 
-1. **控制节点校验**：`validate_offline_tools.py` 读取 manifest，按目标节点的 OS/版本/架构/角色过滤出适用的包，重算归档的 size + sha256 比对 checksums.json，并做 tar 成员安全审计——拒绝绝对路径、`..`、符号链接、硬链接和设备节点（这也是构建端要 `cp -L` 并删掉所有链接的原因）。安装目的地限制在 `/opt/` 子目录。
-2. **按需分发**：并非在检查开始前向所有节点全量分发。diagnostic-tools 在检查流程的初始阶段分发给全部节点；nccl-tests 只在 GPU 节点通过驱动、CUDA、Fabric Manager（NVSwitch fabric 管理服务）等前置资格检查、且显式授权主动测试（`bmc_allow_active_tests=true`）后才按需分发，CPU 节点不会收到这个包。
-3. **幂等安装**：目标节点上留有 `.bare-metal-check-<name>-<version>.sha256` 摘要标记，一致则跳过传输；需要安装时先传到 `/tmp` 暂存，**目标端二次校验** size + sha256 后才解包到 `/opt/bare-metal-check-tools` 或 `/opt/nccl-tests`，最后逐个断言 `required_paths` 存在且可执行，写回安装回执。
+这里选择第二种作为主要形态：模板和数据分离，模板一次性构建，数据在每次检查结束后注入。第三种则作为检查完成后临时分享的便利手段。
 
-状态语义也做了区分：控制节点预检时全量校验失败只发**预警**，不中断基础检查；真正请求该归档的环节遇到缺失、摘要错误、传输或安装失败才记 **ERROR**；工具运行之后性能不达标则记为 **FAIL**。三种情况对应不同的结果状态，在报告中可以区分。
+### 4.1 单文件模板 + base64 数据岛
 
-## 5. HTML 报告：单文件自包含 + 数据独立
-
-报告是这个工具的最终产出，而查看报告的现场机器同样可能离线、没有 Node、甚至没有 Python。HTML 报告的方案是：**构建期与生成期分离，模板一次构建，数据逐次注入**。
-
-### 5.1 单文件模板
-
-前端是 Vue 3 + Vite 工程（`reports/html/`），构建时用 [vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile) 把全部 JS/CSS 内联，配合 `cssCodeSplit: false` 和把 `assetsInlineLimit` 设为一个足够大的值，产出零外部请求的单个 HTML。构建在容器里完成（同一个 `common` builder 镜像里有 Node 20），产物叫 `viewer-template.html`——注意是「模板」，不是报告。
-
-模板里预留了一个数据占位符：
+前端模板用 Vue + Vite 开发，构建时通过 [vite-plugin-singlefile](https://github.com/richardtallent/vite-plugin-singlefile) 插件把 JS/CSS 全部内联，产出只有一个零外部请求的 HTML 文件。文件里预留一个数据占位符：
 
 ```html
 <script type="application/json" id="report-data">__BASE64_REPORT_DATA__</script>
 ```
 
-### 5.2 base64 数据岛
+检查结束后，pyz 内的 Python 代码把本次结果 JSON 做 base64 编码，替换这个占位符，生成最终的 HTML 报告。用 base64 有两个好处：一是避免 JSON 里的 `</script>` 破坏 HTML 解析；二是 base64 字符集安全，即使现场只有 shell 也能手工完成注入。
 
-检查结束后，pyz 里的 Python 代码（`src/bare_metal_check/html_report.py`）把本次的 `run.json` 做 base64 编码，用锚定到该 script 标签的正则精确替换占位符，产出 `runtime/results/<run_id>/reports/<run_id>.html`。
+前端读取时把 `<script type="application/json">` 当作纯数据容器，base64 解码后再按 UTF-8 还原文本，避免中文乱码。模板和数据各自演进、互不依赖，同一份模板可以生成任意多份报告。
 
-为什么用 base64 而不是直接内嵌 JSON？两个原因：JSON 内容里如果出现 `</script>` 会破坏 HTML 解析，base64 字符集天然安全；另外现场只有 shell 时，`base64` + `sed` 也能手工完成注入，不依赖 Python 的模板引擎。前端读取时用 `<script type="application/json">` 作为纯数据容器——浏览器不会执行这个标签里的内容，这种把数据嵌入 HTML 的做法也叫数据岛（data island）——`atob` 解码后再经 `TextDecoder` 还原 UTF-8，避免中文乱码。
+### 4.2 file:// 与 http:// 两种访问
 
-「数据独立」体现在：**模板和数据各自演进、互不依赖**。模板随交付包一次分发，每批次检查产出的 JSON 独立注入，同一份模板可以生成任意多份报告。
+因为所有资源都已内联、数据在 DOM 内部，报告文件可以直接用 `file://` 协议打开，浏览器双击即可查看。没有 fetch 请求，也就不存在跨域或 file:// 安全限制问题，文件可以随意拷贝、归档或通过邮件发送。
 
-### 5.3 file:// 与 http:// 两种访问
+检查命令完成后，CLI 也会启动一个临时静态服务，打印局域网 URL，方便同事直接在浏览器中查看。报告检测到自己是通过 `http://` 协议访问时，会额外渲染一个下载按钮，方便直接把报告保存到本地，省去手工拷贝文件的步骤。
 
-- **`file://`**：因为所有 JS/CSS/字体都内联、数据在 DOM 数据岛里、全程没有 fetch/XHR，浏览器双击打开 HTML 就能完整查看。这不是绕过了浏览器的 file:// 安全限制，而是架构上不存在跨域请求。报告文件可以直接拷贝、归档或通过邮件发送。
-- **`http://`**：`run` 命令完成后，CLI 用标准库 `http.server.SimpleHTTPRequestHandler` 启动一个临时静态服务——socket 绑定端口 0 让 OS 分配空闲端口，监听 `0.0.0.0` 并打印所有本机局域网地址的 URL，方便同事直接从自己的浏览器访问。没有任何自定义路由，因为数据已经内联，服务只需要顺带提供同目录 Excel 报告的下载。页面用 `window.location.protocol` 判断协议，http 模式下才显示「下载报告 / 下载 Excel」按钮；服务随 CLI 进程退出而关闭，长期留存靠单文件 HTML 本身。
+## 5. 重操旧业
 
-Excel 报告有意**不**嵌进 HTML，作为同目录的独立文件通过相对链接引用，保持 HTML 体积小、职责单一。
+这套方案的核心思路是把「自包含」贯彻到交付流程的每一层，从代码依赖、Ansible、三方工具，再到报告，整个流程对现场环境的要求降到了一个 Python 3 解释器和一个可选的浏览器。
 
-## 6. 其他值得一提的点
+实际上这并不是我第一次做巡检工具：差不多四五年前，我就做过一个类似的工具。回顾来看，我在方案的设定和技术偏好上发生了很多变化。
 
-- **可复现性**：所有 tar 包固定 `SOURCE_DATE_EPOCH`、`--sort=name`、`--owner=0`；依赖由 `uv.lock` 锁定；uv 版本固定在 Dockerfile 里；源码依赖固定到 commit 并校验哈希；镜像 tag 由 Dockerfile 内容派生。目标是同一份代码在任何时候构建出的交付包逐字节一致。
-- **安全边界**：离线包只接受 tar 系格式、拒绝链接和设备节点、目的地限 `/opt/`、不执行包内任何安装脚本、不跑 apt/rpm。校验逻辑集中在控制节点一侧的单个 Python 脚本里，便于审计。
+那时的我更看重组件的编码灵活性、接口的标准性，抵触做一个脚本小子。所以那个时候的我非常讨厌 ansible，在实现类似工具时，我尽可能用 http 接口来标准化各个环节，包括分发逻辑和文件传输。但其实并没有做得很好：
 
-## 7. 小结
+- 组件自身的 bootstrap 仍然需要 ansible 来执行，毕竟 ssh 才是真正意义上的 linux native；没有做到自举是当时的一大遗憾；
+- http 接口虽然形式上标准，避免了脚本小子的作风，但是和 ansible 这种业界事实标准差距不小，无法借力已经存在的丰富生态；那时也缺乏插件的模块化经验，机制薄弱，代码还混乱；
+- 当时为了满足报告可编辑的需求，采用了 [docxtpl](https://github.com/elapouya/python-docx-template) 来渲染报告，它是一种组合 docx xml 和 jinja 语法的做法，虽然某种程度上也算做到了数据和模板分离，但远没有 html 生态灵活和易于维护。
 
-这套方案的核心思路是把「自包含」贯彻到交付流程的每一层：CLI 用 shiv 把 Ansible 一起打成 pyz 单文件，运行期再靠 `SHIV_CONSOLE_SCRIPT` 让同一份 pyz 切换出 Ansible 的各个入口；目标节点上的检查工具以「构建期指纹 + 运行期校验 + 按需分发」的离线归档形式送达；报告则通过单文件模板 + base64 数据岛做到构建期与生成期分离，`file://` 双击即可查看，`http://` 便于在局域网内分享。整个流程对现场环境的要求降到了一个 Python 3 解释器和一个浏览器。
+再次做类似的工具，我不再认为使用 ansible 就是脚本小子。我认为关键在于数据接口的标准化：这一次我没有使用 http 接口来定义标准结构，而是用 json schema 来约定每一个检查模块的输出内容。脚本小子的问题不在于写冗长的脚本，而是不会因地制宜。使用 ansible 后节省大量精力用于思考更关键的问题，这就值得。
+
+我记得当时实现那个工具的初版时，我用了一个月；而现在有 AI 辅助之后，我只用了一周（当然后续的打磨还是花了不少时间），还附带了一份精美的 html 报告，真让人唏嘘不已。
