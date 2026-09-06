@@ -34,6 +34,7 @@ Argo CD 把 Git 仓库当作集群期望状态的来源，通过 `Application` �
 - **Sync Policy**：`automated.prune` 控制是否自动清理 Git 中不存在的资源，`selfHeal` 控制是否自动修复偏离期望状态的手动改动。详见 [Argo CD Automated Sync Policy](https://argo-cd.readthedocs.io/en/stable/user-guide/auto_sync/)。
 - **Sync Waves**：通过注解给资源分组，Argo CD 按 wave 顺序创建、反向删除，用来编排依赖关系。详见 [Argo CD Sync Waves](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-waves/)。
 - **Finalizer / Propagation Policy**：决定删除 Application 时是否级联删除其管理的资源，以及使用 foreground 还是 background 策略。详见 [Argo CD Application Deletion](https://argo-cd.readthedocs.io/en/latest/user-guide/app_deletion/)。
+- **手动触发 Sync**：开启 `automated` 后 Argo CD 会定期轮询并自动同步；如果需要立即生效，可以通过 UI 点击 **Sync**、使用 CLI `argocd app sync <app>`，或对 Application 打 `argocd.argoproj.io/refresh: hard` 注解触发重新拉取。
 
 ### 2.2 仓库结构
 
@@ -133,6 +134,28 @@ spec:
 3. apply `apps-root.yaml`，让 Argo CD 开始发现 `clusters/prod/apps/` 下的应用。
 
 之后新增基础设施组件时，只需在 `clusters/prod/apps/` 下提交一个 Application，Argo CD 就会自动发现并同步，不再需要手动 apply。组件自身的 Helm values 放在 `infrastructure/<组件名>/values.yaml` 中。
+
+### 2.3 仓库认证：Deploy Key + 声明式 Secret
+
+`apps-root.yaml` 和自管理 `argocd.yaml` 都通过 SSH 访问私有仓库，因此需要让 Argo CD 持有私钥。我没有在 UI 里手动点 **Connect Repo**，而是用声明式 Secret：
+
+1. 生成 ED25519 密钥对，公钥添加到 GitHub Deploy Keys（**不勾选** write access）。
+2. 在控制节点创建 Secret 并打上 Argo CD 仓库标签：
+
+   ```bash
+   kubectl create secret generic argocd-github-deploy-key \
+     -n argocd \
+     --from-file=sshPrivateKey=.secrets/argocd-github-deploy-key \
+     --from-literal=type=git \
+     --from-literal=url=git@github.com:chaneyzorn/homelab.git \
+     --dry-run=client -o yaml | kubectl apply -f -
+
+   kubectl label secret argocd-github-deploy-key \
+     -n argocd \
+     argocd.argoproj.io/secret-type=repository
+   ```
+
+Argo CD 会自动发现带 `argocd.argoproj.io/secret-type=repository` 标签的 Secret，将其注册为仓库凭据。这样 bootstrap 脚本不需要登录 UI 就能完成仓库认证。
 
 App of Apps 的层级关系如下：
 
