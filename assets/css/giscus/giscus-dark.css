@@ -36,7 +36,7 @@ main {
   --color-prettylights-syntax-constant-other-reference-link: #a5d6ff;
   --color-btn-text: rgb(232, 224, 212);
   --color-btn-bg: rgb(36, 34, 31);
-  --color-btn-border: rgba(232, 224, 212, 0.1);
+  --color-btn-border: rgba(232, 224, 212, 0.08);
   --color-btn-shadow: 0 0 transparent;
   --color-btn-inset-shadow: 0 0 transparent;
   --color-btn-hover-bg: rgb(48, 44, 38);
@@ -46,16 +46,16 @@ main {
   --color-btn-selected-bg: rgb(59, 54, 46);
   --color-btn-primary-text: rgb(24, 23, 21);
   --color-btn-primary-bg: rgb(245, 158, 11);
-  --color-btn-primary-border: rgba(245, 158, 11, 0.25);
+  --color-btn-primary-border: rgba(245, 158, 11, 0.2);
   --color-btn-primary-shadow: 0 0 #0000;
   --color-btn-primary-inset-shadow: 0 0 #0000;
   --color-btn-primary-hover-bg: rgb(217, 119, 6);
-  --color-btn-primary-hover-border: rgba(217, 119, 6, 0.25);
+  --color-btn-primary-hover-border: rgba(217, 119, 6, 0.2);
   --color-btn-primary-selected-bg: rgb(217, 119, 6);
   --color-btn-primary-selected-shadow: 0 0 #0000;
   --color-btn-primary-disabled-text: rgba(24, 23, 21, 0.5);
   --color-btn-primary-disabled-bg: rgba(245, 158, 11, 0.5);
-  --color-btn-primary-disabled-border: rgba(245, 158, 11, 0.15);
+  --color-btn-primary-disabled-border: rgba(245, 158, 11, 0.12);
   --color-action-list-item-default-hover-bg: rgba(59, 54, 46, 0.5);
   --color-segmented-control-bg: rgb(59, 54, 46);
   --color-segmented-control-button-bg: rgb(24, 23, 21);
@@ -63,10 +63,10 @@ main {
   --color-fg-default: rgb(232, 224, 212);
   --color-fg-muted: rgb(160, 148, 130);
   --color-fg-subtle: rgb(122, 108, 90);
-  --color-canvas-default: rgb(36, 34, 31);
+  --color-canvas-default: rgb(24, 23, 21);
   --color-canvas-overlay: rgb(36, 34, 31);
-  --color-canvas-inset: rgb(24, 23, 21);
-  --color-canvas-subtle: rgb(24, 23, 21);
+  --color-canvas-inset: rgb(48, 44, 38);
+  --color-canvas-subtle: rgb(48, 44, 38);
   --color-border-default: rgb(59, 54, 46);
   --color-border-muted: rgb(72, 65, 55);
   --color-neutral-muted: rgba(72, 65, 55, 0.4);
@@ -96,9 +96,7 @@ main .gsc-loading-image {
   background-image: url(https://github.githubassets.com/images/mona-loading-dark.gif);
 }
 
-/* ===== MoonBook 站点化覆盖：聚焦光环与选中态 ===== */
-
-/* 反应按钮选中态 */
+/* ===== MoonBook 站点化覆盖：反应按钮选中态 ===== */
 main .gsc-reaction-button.reacted {
   background-color: var(--color-accent-subtle);
   border-color: var(--color-accent-emphasis);
