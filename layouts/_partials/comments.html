@@ -2,6 +2,8 @@
 {{- $light := resources.Get "css/giscus/giscus-light.css" | minify | fingerprint -}}
 {{- $dark := resources.Get "css/giscus/giscus-dark.css" | minify | fingerprint -}}
 
+<hr class="comments-divider">
+
 <div class="giscus"
      data-light-theme="{{ $light.Permalink }}"
      data-dark-theme="{{ $dark.Permalink }}"></div>

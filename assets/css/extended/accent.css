@@ -1092,7 +1092,13 @@ details.toc summary:hover .title {
     transition: none;
 }
 
-/* ===== giscus 评论区：与正文 footer 拉开间距 ===== */
+/* ===== giscus 评论区：分割线与间距 ===== */
+.comments-divider {
+    margin: 2.5rem 0 1.5rem;
+    border: 0;
+    border-top: 1px solid var(--border);
+}
+
 .giscus {
-    margin-top: calc(var(--gap) * 2);
+    margin-top: 0;
 }
