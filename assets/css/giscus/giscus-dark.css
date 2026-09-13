@@ -8,9 +8,8 @@
 
 /* ===== MoonBook 站点化覆盖：聚焦光环与选中态 ===== */
 
-/* 输入框聚焦：琥珀色光环 */
-main .form-control:focus,
-main .gsc-comment-box-textarea:focus {
+/* 输入框聚焦：琥珀色光环（不覆盖 gsc-comment-box-write 的 focus-within） */
+main .form-control:focus {
     border-color: var(--color-accent-emphasis);
     box-shadow: 0 0 0 3px var(--color-accent-muted);
     outline: none;
