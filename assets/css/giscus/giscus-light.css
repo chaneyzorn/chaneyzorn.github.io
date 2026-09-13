@@ -6,30 +6,7 @@
 
   /*! Extensions from @primer/css/alerts/flash.scss */--color-social-reaction-bg-hover:var(--color-scale-gray-1);--color-social-reaction-bg-reacted-hover:var(--color-scale-blue-1)}main .pagination-loader-container{background-image:url(https://github.com/images/modules/pulls/progressive-disclosure-line.svg)}main .gsc-loading-image{background-image:url(https://github.githubassets.com/images/mona-loading-default.gif)}
 
-/* ===== MoonBook 站点化覆盖：圆角与间距统一 ===== */
-main .btn,
-main .BtnGroup,
-main .BtnGroup-item,
-main .form-control,
-main .form-select,
-main .gsc-comment-box,
-main .gsc-comment-box-tabs button,
-main .gsc-comment-box-write,
-main .gsc-comment-box-preview,
-main .gsc-reply-box,
-main .gsc-comment,
-main .gsc-reaction-button,
-main .gsc-pagination-button {
-    border-radius: 10px;
-}
-
-/* 评论框轻微圆角，与站点卡片一致 */
-main .gsc-comment {
-    border: 1px solid var(--color-border-default);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 14px;
-}
+/* ===== MoonBook 站点化覆盖：聚焦光环与选中态 ===== */
 
 /* 输入框聚焦：琥珀色光环 */
 main .form-control:focus,
@@ -43,9 +20,4 @@ main .gsc-comment-box-textarea:focus {
 main .gsc-reaction-button.reacted {
     background-color: var(--color-accent-subtle);
     border-color: var(--color-accent-emphasis);
-}
-
-/* 分页按钮 */
-main .gsc-pagination-button {
-    border: 1px solid var(--color-border-default);
 }
