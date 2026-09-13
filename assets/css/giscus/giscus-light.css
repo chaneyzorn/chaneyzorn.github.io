@@ -2,21 +2,111 @@
 /*! MIT License
  * Copyright (c) 2018 GitHub Inc.
  * https://github.com/primer/primitives/blob/main/LICENSE
- */main{--color-prettylights-syntax-comment:#6e7781;--color-prettylights-syntax-constant:#0550ae;--color-prettylights-syntax-entity:#8250df;--color-prettylights-syntax-storage-modifier-import:#24292f;--color-prettylights-syntax-entity-tag:#116329;--color-prettylights-syntax-keyword:#cf222e;--color-prettylights-syntax-string:#0a3069;--color-prettylights-syntax-variable:#953800;--color-prettylights-syntax-brackethighlighter-unmatched:#82071e;--color-prettylights-syntax-invalid-illegal-text:#f6f8fa;--color-prettylights-syntax-invalid-illegal-bg:#82071e;--color-prettylights-syntax-carriage-return-text:#f6f8fa;--color-prettylights-syntax-carriage-return-bg:#cf222e;--color-prettylights-syntax-string-regexp:#116329;--color-prettylights-syntax-markup-list:#3b2300;--color-prettylights-syntax-markup-heading:#0550ae;--color-prettylights-syntax-markup-italic:#24292f;--color-prettylights-syntax-markup-bold:#24292f;--color-prettylights-syntax-markup-deleted-text:#82071e;--color-prettylights-syntax-markup-deleted-bg:#ffebe9;--color-prettylights-syntax-markup-inserted-text:#116329;--color-prettylights-syntax-markup-inserted-bg:#dafbe1;--color-prettylights-syntax-markup-changed-text:#953800;--color-prettylights-syntax-markup-changed-bg:#ffd8b5;--color-prettylights-syntax-markup-ignored-text:#eaeef2;--color-prettylights-syntax-markup-ignored-bg:#0550ae;--color-prettylights-syntax-meta-diff-range:#8250df;--color-prettylights-syntax-brackethighlighter-angle:#57606a;--color-prettylights-syntax-sublimelinter-gutter-mark:#8c959f;--color-prettylights-syntax-constant-other-reference-link:#0a3069;--color-btn-text: rgb(84, 73, 59);--color-btn-bg: rgb(255, 255, 255);--color-btn-border: rgba(84, 73, 59, 0.15);--color-btn-shadow: 0 1px 0 rgba(60, 40, 10, 0.06);--color-btn-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);--color-btn-hover-bg: rgb(246, 240, 231);--color-btn-hover-border: rgba(84, 73, 59, 0.2);--color-btn-active-bg: rgb(238, 229, 216);--color-btn-active-border: rgba(84, 73, 59, 0.25);--color-btn-selected-bg: rgb(238, 229, 216);--color-btn-primary-text: rgb(255, 255, 255);--color-btn-primary-bg: rgb(217, 119, 6);--color-btn-primary-border: rgba(217, 119, 6, 0.3);--color-btn-primary-shadow: 0 1px 0 rgba(60, 40, 10, 0.08);--color-btn-primary-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);--color-btn-primary-hover-bg: rgb(146, 64, 14);--color-btn-primary-hover-border: rgba(146, 64, 14, 0.3);--color-btn-primary-selected-bg: rgb(146, 64, 14);--color-btn-primary-selected-shadow: inset 0 1px 0 rgba(60, 40, 10, 0.15);--color-btn-primary-disabled-text: rgba(255, 255, 255, 0.8);--color-btn-primary-disabled-bg: rgba(217, 119, 6, 0.5);--color-btn-primary-disabled-border: rgba(217, 119, 6, 0.15);--color-action-list-item-default-hover-bg: rgba(238, 229, 216, 0.35);--color-segmented-control-bg: rgb(238, 229, 216);--color-segmented-control-button-bg: rgb(255, 255, 255);--color-segmented-control-button-selected-border: rgb(122, 108, 90);--color-fg-default: rgb(84, 73, 59);--color-fg-muted: rgb(122, 108, 90);--color-fg-subtle: rgb(160, 148, 130);--color-canvas-default: rgb(255, 255, 255);--color-canvas-overlay: rgb(255, 255, 255);--color-canvas-inset: rgb(250, 247, 242);--color-canvas-subtle: rgb(250, 247, 242);--color-border-default: rgb(238, 229, 216);--color-border-muted: rgb(214, 204, 190);--color-neutral-muted: rgba(214, 204, 190, 0.32);--color-accent-fg: rgb(217, 119, 6);--color-accent-emphasis: rgb(217, 119, 6);--color-accent-muted: rgba(217, 119, 6, 0.4);--color-accent-subtle: rgb(254, 243, 199);--color-success-fg:#1a7f37;--color-attention-fg: rgb(217, 119, 6);--color-attention-muted: rgba(217, 119, 6, 0.4);--color-attention-subtle: rgb(254, 243, 199);--color-danger-fg: rgb(209, 54, 54);--color-danger-muted: rgba(209, 54, 54, 0.35);--color-danger-subtle: rgb(255, 235, 233);--color-primer-shadow-inset: inset 0 1px 0 rgba(238, 229, 216, 0.4);--color-scale-gray-1: rgb(238, 229, 216);--color-scale-blue-1: rgba(217, 119, 6, 0.15);
+ */
+main {
+  --color-prettylights-syntax-comment: #6e7781;
+  --color-prettylights-syntax-constant: #0550ae;
+  --color-prettylights-syntax-entity: #8250df;
+  --color-prettylights-syntax-storage-modifier-import: #24292f;
+  --color-prettylights-syntax-entity-tag: #116329;
+  --color-prettylights-syntax-keyword: #cf222e;
+  --color-prettylights-syntax-string: #0a3069;
+  --color-prettylights-syntax-variable: #953800;
+  --color-prettylights-syntax-brackethighlighter-unmatched: #82071e;
+  --color-prettylights-syntax-invalid-illegal-text: #f6f8fa;
+  --color-prettylights-syntax-invalid-illegal-bg: #82071e;
+  --color-prettylights-syntax-carriage-return-text: #f6f8fa;
+  --color-prettylights-syntax-carriage-return-bg: #cf222e;
+  --color-prettylights-syntax-string-regexp: #116329;
+  --color-prettylights-syntax-markup-list: #3b2300;
+  --color-prettylights-syntax-markup-heading: #0550ae;
+  --color-prettylights-syntax-markup-italic: #24292f;
+  --color-prettylights-syntax-markup-bold: #24292f;
+  --color-prettylights-syntax-markup-deleted-text: #82071e;
+  --color-prettylights-syntax-markup-deleted-bg: #ffebe9;
+  --color-prettylights-syntax-markup-inserted-text: #116329;
+  --color-prettylights-syntax-markup-inserted-bg: #dafbe1;
+  --color-prettylights-syntax-markup-changed-text: #953800;
+  --color-prettylights-syntax-markup-changed-bg: #ffd8b5;
+  --color-prettylights-syntax-markup-ignored-text: #eaeef2;
+  --color-prettylights-syntax-markup-ignored-bg: #0550ae;
+  --color-prettylights-syntax-meta-diff-range: #8250df;
+  --color-prettylights-syntax-brackethighlighter-angle: #57606a;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #8c959f;
+  --color-prettylights-syntax-constant-other-reference-link: #0a3069;
+  --color-btn-text: rgb(84, 73, 59);
+  --color-btn-bg: rgb(255, 255, 255);
+  --color-btn-border: rgba(84, 73, 59, 0.15);
+  --color-btn-shadow: 0 1px 0 rgba(60, 40, 10, 0.06);
+  --color-btn-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --color-btn-hover-bg: rgb(246, 240, 231);
+  --color-btn-hover-border: rgba(84, 73, 59, 0.2);
+  --color-btn-active-bg: rgb(238, 229, 216);
+  --color-btn-active-border: rgba(84, 73, 59, 0.25);
+  --color-btn-selected-bg: rgb(238, 229, 216);
+  --color-btn-primary-text: rgb(255, 255, 255);
+  --color-btn-primary-bg: rgb(217, 119, 6);
+  --color-btn-primary-border: rgba(217, 119, 6, 0.3);
+  --color-btn-primary-shadow: 0 1px 0 rgba(60, 40, 10, 0.08);
+  --color-btn-primary-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --color-btn-primary-hover-bg: rgb(146, 64, 14);
+  --color-btn-primary-hover-border: rgba(146, 64, 14, 0.3);
+  --color-btn-primary-selected-bg: rgb(146, 64, 14);
+  --color-btn-primary-selected-shadow: inset 0 1px 0 rgba(60, 40, 10, 0.15);
+  --color-btn-primary-disabled-text: rgba(255, 255, 255, 0.8);
+  --color-btn-primary-disabled-bg: rgba(217, 119, 6, 0.5);
+  --color-btn-primary-disabled-border: rgba(217, 119, 6, 0.15);
+  --color-action-list-item-default-hover-bg: rgba(238, 229, 216, 0.35);
+  --color-segmented-control-bg: rgb(238, 229, 216);
+  --color-segmented-control-button-bg: rgb(255, 255, 255);
+  --color-segmented-control-button-selected-border: rgb(122, 108, 90);
+  --color-fg-default: rgb(84, 73, 59);
+  --color-fg-muted: rgb(122, 108, 90);
+  --color-fg-subtle: rgb(160, 148, 130);
+  --color-canvas-default: rgb(255, 255, 255);
+  --color-canvas-overlay: rgb(255, 255, 255);
+  --color-canvas-inset: rgb(250, 247, 242);
+  --color-canvas-subtle: rgb(250, 247, 242);
+  --color-border-default: rgb(238, 229, 216);
+  --color-border-muted: rgb(214, 204, 190);
+  --color-neutral-muted: rgba(214, 204, 190, 0.32);
+  --color-accent-fg: rgb(217, 119, 6);
+  --color-accent-emphasis: rgb(217, 119, 6);
+  --color-accent-muted: rgba(217, 119, 6, 0.4);
+  --color-accent-subtle: rgb(254, 243, 199);
+  --color-success-fg: #1a7f37;
+  --color-attention-fg: rgb(217, 119, 6);
+  --color-attention-muted: rgba(217, 119, 6, 0.4);
+  --color-attention-subtle: rgb(254, 243, 199);
+  --color-danger-fg: rgb(209, 54, 54);
+  --color-danger-muted: rgba(209, 54, 54, 0.35);
+  --color-danger-subtle: rgb(255, 235, 233);
+  --color-primer-shadow-inset: inset 0 1px 0 rgba(238, 229, 216, 0.4);
+  --color-scale-gray-1: rgb(238, 229, 216);
+  --color-scale-blue-1: rgba(217, 119, 6, 0.15);
 
-  /*! Extensions from @primer/css/alerts/flash.scss */--color-social-reaction-bg-hover:var(--color-scale-gray-1);--color-social-reaction-bg-reacted-hover:var(--color-scale-blue-1)}main .pagination-loader-container{background-image:url(https://github.com/images/modules/pulls/progressive-disclosure-line.svg)}main .gsc-loading-image{background-image:url(https://github.githubassets.com/images/mona-loading-default.gif)}
+  /*! Extensions from @primer/css/alerts/flash.scss */
+  --color-social-reaction-bg-hover: var(--color-scale-gray-1);
+  --color-social-reaction-bg-reacted-hover: var(--color-scale-blue-1);
+}
+main .pagination-loader-container {
+  background-image: url(https://github.com/images/modules/pulls/progressive-disclosure-line.svg);
+}
+main .gsc-loading-image {
+  background-image: url(https://github.githubassets.com/images/mona-loading-default.gif);
+}
 
 /* ===== MoonBook 站点化覆盖：聚焦光环与选中态 ===== */
 
 /* 输入框聚焦：琥珀色光环（不覆盖 gsc-comment-box-write 的 focus-within） */
 main .form-control:focus {
-    border-color: var(--color-accent-emphasis);
-    box-shadow: 0 0 0 3px var(--color-accent-muted);
-    outline: none;
+  border-color: var(--color-accent-emphasis);
+  box-shadow: 0 0 0 3px var(--color-accent-muted);
+  outline: none;
 }
 
 /* 反应按钮选中态 */
 main .gsc-reaction-button.reacted {
-    background-color: var(--color-accent-subtle);
-    border-color: var(--color-accent-emphasis);
+  background-color: var(--color-accent-subtle);
+  border-color: var(--color-accent-emphasis);
 }
