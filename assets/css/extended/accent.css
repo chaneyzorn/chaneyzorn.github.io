@@ -1091,3 +1091,8 @@ details.toc summary:hover .title {
 .post-single-wrapper.toc-no-anim .toc {
     transition: none;
 }
+
+/* ===== giscus 评论区：与正文 footer 拉开间距 ===== */
+.giscus {
+    margin-top: calc(var(--gap) * 2);
+}
