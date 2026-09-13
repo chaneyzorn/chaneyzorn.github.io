@@ -2,5 +2,6 @@
 public/
 resources/
 .rumdl_cache/
+references/
 
 .DS_Store

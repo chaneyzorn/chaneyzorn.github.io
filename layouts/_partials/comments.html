@@ -1,0 +1,7 @@
+{{- /* giscus 评论区：使用 Hugo asset pipeline 处理自定义主题，并通过 Permalink 生成绝对 URL，避免 iframe 内相对路径被解析到 giscus.app */ -}}
+{{- $light := resources.Get "css/giscus/giscus-light.css" | minify | fingerprint -}}
+{{- $dark := resources.Get "css/giscus/giscus-dark.css" | minify | fingerprint -}}
+
+<div class="giscus"
+     data-light-theme="{{ $light.Permalink }}"
+     data-dark-theme="{{ $dark.Permalink }}"></div>

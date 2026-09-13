@@ -243,3 +243,69 @@
         onScroll();
     })();
 </script>
+
+{{/* giscus 评论：动态初始化 script，主题跟随 PaperMod 手动切换。评论区容器由 layouts/_partials/comments.html 输出，data-light-theme / data-dark-theme 可以是 giscus 内置主题名，也可以是自定义 CSS URL。 */}}
+{{- if (.Param "comments") }}
+<script>
+    (() => {
+        const container = document.querySelector('.giscus');
+        if (!container) return;
+
+        const lightTheme = container.dataset.lightTheme;
+        const darkTheme = container.dataset.darkTheme;
+        if (!lightTheme || !darkTheme) return;
+
+        const currentTheme = () => document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        const currentGiscusTheme = () => currentTheme() === 'dark' ? darkTheme : lightTheme;
+
+        // 动态创建 giscus script，确保初始 theme 与当前 PaperMod 主题一致
+        const script = document.createElement('script');
+        script.src = 'https://giscus.app/client.js';
+        script.dataset.repo = 'chaneyzorn/chaneyzorn.github.io';
+        script.dataset.repoId = 'R_kgDOJ56XvA';
+        script.dataset.category = 'Announcements';
+        script.dataset.categoryId = 'DIC_kwDOJ56XvM4DFdTJ';
+        script.dataset.mapping = 'pathname';
+        script.dataset.strict = '0';
+        script.dataset.reactionsEnabled = '1';
+        script.dataset.emitMetadata = '0';
+        script.dataset.inputPosition = 'top';
+        script.dataset.theme = currentGiscusTheme();
+        script.dataset.lang = 'zh-CN';
+        script.dataset.loading = 'lazy';
+        script.crossOrigin = 'anonymous';
+        script.async = true;
+        container.appendChild(script);
+
+        // 向 giscus iframe 发送主题更新
+        const sendTheme = (theme) => {
+            const iframe = document.querySelector('iframe.giscus-frame');
+            if (!iframe || !iframe.contentWindow) return;
+            iframe.contentWindow.postMessage(
+                { giscus: { setConfig: { theme } } },
+                'https://giscus.app'
+            );
+        };
+
+        // 监听 PaperMod 主题切换：html[data-theme] 变化即同步
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                    sendTheme(currentGiscusTheme());
+                    break;
+                }
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true });
+
+        // 兜底：也监听主题切换按钮点击
+        const toggle = document.getElementById('theme-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                // dataset 变更已被 MutationObserver 捕获，这里只做短暂延时兜底
+                window.setTimeout(() => sendTheme(currentGiscusTheme()), 50);
+            });
+        }
+    })();
+</script>
+{{- end }}
