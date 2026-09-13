@@ -222,12 +222,3 @@ services:
     disableInlineCSS: true
   rss:
     limit: 100
-
-# 本地 hugo server 开发时，允许 giscus iframe（giscus.app）跨域加载自定义主题 CSS。
-# Access-Control-Allow-Private-Network 用于绕过 Chrome Private Network Access 限制。
-server:
-  headers:
-    - for: "/*"
-      values:
-        Access-Control-Allow-Origin: "*"
-        Access-Control-Allow-Private-Network: "true"
