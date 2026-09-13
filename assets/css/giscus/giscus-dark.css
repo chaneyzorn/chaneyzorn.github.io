@@ -98,13 +98,6 @@ main .gsc-loading-image {
 
 /* ===== MoonBook 站点化覆盖：聚焦光环与选中态 ===== */
 
-/* 输入框聚焦：琥珀色光环（不覆盖 gsc-comment-box-write 的 focus-within） */
-main .form-control:focus {
-  border-color: var(--color-accent-emphasis);
-  box-shadow: 0 0 0 3px var(--color-accent-muted);
-  outline: none;
-}
-
 /* 反应按钮选中态 */
 main .gsc-reaction-button.reacted {
   background-color: var(--color-accent-subtle);
